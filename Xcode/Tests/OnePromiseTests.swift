@@ -32,4 +32,17 @@ class OnePromiseTests: XCTestCase {
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
+    func testOnRejected() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise.then(nil, { (e:NSError) -> Void in
+            expectation.fulfill()
+        })
+
+        promise.reject(NSError(domain: "", code: -1, userInfo: nil))
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }

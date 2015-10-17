@@ -34,25 +34,63 @@ public class Promise<T> {
 
     private var onFulfilled: [(ValueType) -> Void] = []
 
-    private var onRejectd: [(NSError) -> Void] = []
+    private var onRejected: [(NSError) -> Void] = []
 
     public init() {
 
     }
 
-    public func then<U>(onFulfilled: (ValueType) -> Promise<U>) -> Promise<U> {
+    public func then<U>(onFulfilled: (ValueType) -> Promise<U>, _ onRejected: ((NSError) -> Void)? = nil) -> Promise<U>
+    {
         return Promise<U>({ (nextPromise) -> Void in
-            self.onFulfilled.append({ (value) -> Void in
-                onFulfilled(value).then(nextPromise.fulfill)
-            })
+            self.appendOnFulfilled(nextPromise, onFulfilled)
+
+            if let onRejected = onRejected {
+                self.appendOnRejected(nextPromise, onRejected)
+            }
         })
     }
 
-    public func then<U>(onFulfilled: (ValueType) -> U) -> Promise<U> {
+    public func then<U>(onFulfilled: (ValueType) -> U, _ onRejected: ((NSError) -> Void)? = nil) -> Promise<U>
+    {
         return Promise<U>({ (nextPromise) -> Void in
-            self.onFulfilled.append({ (value) -> Void in
-                nextPromise.fulfill(onFulfilled(value))
-            })
+            self.appendOnFulfilled(nextPromise, onFulfilled)
+
+            if let onRejected = onRejected {
+                self.appendOnRejected(nextPromise, onRejected)
+            }
+        })
+    }
+
+    public func then(onFulfilled: ((ValueType) -> T)?, _ onRejected: ((NSError) -> Void)? = nil) -> Promise<T>
+    {
+        return Promise<T>({ (nextPromise) -> Void in
+            if let onFulfilled = onFulfilled {
+                self.appendOnFulfilled(nextPromise, onFulfilled)
+            }
+
+            if let onRejected = onRejected {
+                self.appendOnRejected(nextPromise, onRejected)
+            }
+        })
+    }
+
+    private func appendOnFulfilled<U>(nextPromise: Promise<U>, _ onFulfilled: ValueType -> Promise<U>) {
+        self.onFulfilled.append({ (value) -> Void in
+            onFulfilled(value).then(nextPromise.fulfill)
+        })
+    }
+
+    private func appendOnFulfilled<U>(nextPromise: Promise<U>, _ onFulfilled: ValueType -> U) {
+        self.onFulfilled.append({ (value) -> Void in
+            nextPromise.fulfill(onFulfilled(value))
+        })
+    }
+
+    private func appendOnRejected<U>(nextPromise: Promise<U>, _ onRejected: NSError -> Void) {
+        self.onRejected.append({ (error) -> Void in
+            onRejected(error)
+            nextPromise.reject(error)
         })
     }
 
@@ -67,7 +105,7 @@ public class Promise<T> {
     public func reject(error: NSError) {
         self.state = .Rejected(error)
 
-        for cb in self.onRejectd {
+        for cb in self.onRejected {
             cb(error)
         }
     }
