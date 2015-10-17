@@ -1,6 +1,6 @@
 # OnePromise
 
-Promise for Swift in 1 file.
+One of the Promises in Swift world just for fun :-)
 
 ## Requirement
 
