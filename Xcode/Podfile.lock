@@ -9,6 +9,6 @@ EXTERNAL SOURCES:
     :path: ../
 
 SPEC CHECKSUMS:
-  OnePromise: d959276671f2a2b78c43b7b97e56b68d98e2ba08
+  OnePromise: a12827ada7f780ad974f469bb0d8f56896daecb1
 
 COCOAPODS: 0.38.2
