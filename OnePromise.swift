@@ -117,59 +117,62 @@ public class Promise<T> {
     }
 
     private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType -> Promise<U>) {
+        let onFulfilledAsync = { (value) -> Void in
+            dispatch_async(dispatchQueue, {
+                onFulfilled(value).then(dispatchQueue, nextPromise.fulfill)
+            })
+        }
+
         switch self.state {
         case .Pending:
-            self.onFulfilled.append({ (value) -> Void in
-                dispatch_async(dispatchQueue, {
-                    onFulfilled(value).then(dispatchQueue, nextPromise.fulfill)
-                })
-            })
+            self.onFulfilled.append(onFulfilledAsync)
         case .Fulfilled(let value):
-            dispatch_async(dispatchQueue, {
-                onFulfilled(value).then(nextPromise.fulfill)
-            })
+            onFulfilledAsync(value)
         case .Rejected(_):
             return
         }
     }
 
     private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: (ValueType -> U)?) {
-        if let onFulfilled = onFulfilled {
-            switch self.state {
-            case .Pending:
-                self.onFulfilled.append({ (value) -> Void in
-                    dispatch_async(dispatchQueue, {
-                        nextPromise.fulfill(onFulfilled(value))
-                    })
-                })
-            case .Fulfilled(let value):
-                dispatch_async(dispatchQueue, {
-                    nextPromise.fulfill(onFulfilled(value))
-                })
-            case .Rejected(_):
-                return
-            }
+        guard let onFulfilled = onFulfilled else {
+            return
+        }
+
+        let onFulfilledAsync = { (value) -> Void in
+            dispatch_async(dispatchQueue, {
+                nextPromise.fulfill(onFulfilled(value))
+            })
+        }
+
+        switch self.state {
+        case .Pending:
+            self.onFulfilled.append(onFulfilledAsync)
+        case .Fulfilled(let value):
+            onFulfilledAsync(value)
+        case .Rejected(_):
+            return
         }
     }
 
     private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onRejected: (NSError -> Void)?) {
-        if let onRejected = onRejected {
-            switch self.state {
-            case .Pending:
-                self.onRejected.append({ (error) -> Void in
-                    dispatch_async(dispatchQueue, {
-                        onRejected(error)
-                        nextPromise.reject(error)
-                    })
-                })
-            case .Fulfilled(_):
-                return
-            case .Rejected(let error):
-                dispatch_async(dispatchQueue, {
-                    onRejected(error)
-                    nextPromise.reject(error)
-                })
-            }
+        guard let onRejected = onRejected else {
+            return
+        }
+
+        let onRejectedAsync = { (error: NSError) -> Void in
+            dispatch_async(dispatchQueue, {
+                onRejected(error)
+                nextPromise.reject(error)
+            })
+        }
+
+        switch self.state {
+        case .Pending:
+            self.onRejected.append(onRejectedAsync)
+        case .Fulfilled(_):
+            return
+        case .Rejected(let error):
+            onRejectedAsync(error)
         }
     }
 
