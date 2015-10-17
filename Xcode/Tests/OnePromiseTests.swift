@@ -4,27 +4,28 @@ import OnePromise
 
 class OnePromiseTests: XCTestCase {
 
-    func createPromise() -> Promise<Int> {
-        return Promise()
-    }
-
     func testExample() {
         let expectation = self.expectationWithDescription("done")
 
         let promise = Promise<Int>()
 
         promise
-            .then({ (v) -> Int in
-                v * 2
+            .then({
+                $0 * 2
             })
-            .then({ (v:Int) -> Promise<Double> in
-                XCTAssertEqual(v, 2000)
+            .then({ (i) -> Promise<String> in
+
+                XCTAssertEqual(i, 2000)
+
+                let np = Promise<String>()
+
+                np.fulfill("\(i)")
+
+                return np
+            })
+            .then(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), { (s) in
                 expectation.fulfill()
-
-                return Promise()
-            })
-            .then({ (v) in
-
+                XCTAssertEqual(s, "2000")
             })
 
         promise.fulfill(1000)

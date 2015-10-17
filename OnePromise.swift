@@ -181,9 +181,13 @@ public class Promise<T> {
                 for cb in self.onFulfilled {
                     cb(value)
                 }
+
+                self.onFulfilled.removeAll(keepCapacity: false)
             }
             else {
-                fatalError("\(self.state) must not transition to any other state.")
+                #if DEBUG
+                    fatalError("\(self.state) must not transition to any other state.")
+                #endif
             }
         }
     }
@@ -196,9 +200,13 @@ public class Promise<T> {
                 for cb in self.onRejected {
                     cb(error)
                 }
+
+                self.onRejected.removeAll(keepCapacity: false)
             }
             else {
-                fatalError("\(self.state) must not transition to any other state.")
+                #if DEBUG
+                    fatalError("\(self.state) must not transition to any other state.")
+                #endif
             }
         }
     }
