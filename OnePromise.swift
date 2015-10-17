@@ -72,46 +72,60 @@ public class Promise<T> {
     }
 
     public func then<U>(onFulfilled: ValueType -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
-        let nextPromise = Promise<U>()
-
-        performSync {
-            self.appendOnFulfilled(nextPromise, onFulfilled)
-            self.appendOnRejected(nextPromise, onRejected)
-        }
-
-        return nextPromise
+        return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
     public func then<U>(onFulfilled: ValueType -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
-        let nextPromise = Promise<U>()
-
-        performSync {
-            self.appendOnFulfilled(nextPromise, onFulfilled)
-            self.appendOnRejected(nextPromise, onRejected)
-        }
-
-        return nextPromise
+        return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
     public func then(onFulfilled: (ValueType -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
-        let nextPromise = Promise<T>()
+        return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
+    }
+
+    public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
+        let nextPromise = Promise<U>()
 
         performSync {
-            self.appendOnFulfilled(nextPromise, onFulfilled)
-            self.appendOnRejected(nextPromise, onRejected)
+            self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
+            self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
 
         return nextPromise
     }
 
-    private func appendOnFulfilled<U>(nextPromise: Promise<U>, _ onFulfilled: ValueType -> Promise<U>) {
+    public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
+        let nextPromise = Promise<U>()
+
+        performSync {
+            self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
+            self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
+        }
+
+        return nextPromise
+    }
+
+    public func then(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
+        let nextPromise = Promise<T>()
+
+        performSync {
+            self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
+            self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
+        }
+
+        return nextPromise
+    }
+
+    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType -> Promise<U>) {
         switch self.state {
         case .Pending:
             self.onFulfilled.append({ (value) -> Void in
-                onFulfilled(value).then(nextPromise.fulfill)
+                dispatch_async(dispatchQueue, {
+                    onFulfilled(value).then(dispatchQueue, nextPromise.fulfill)
+                })
             })
         case .Fulfilled(let value):
-            dispatch_async(dispatch_get_main_queue(), {
+            dispatch_async(dispatchQueue, {
                 onFulfilled(value).then(nextPromise.fulfill)
             })
         case .Rejected(_):
@@ -119,15 +133,17 @@ public class Promise<T> {
         }
     }
 
-    private func appendOnFulfilled<U>(nextPromise: Promise<U>, _ onFulfilled: (ValueType -> U)?) {
+    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: (ValueType -> U)?) {
         if let onFulfilled = onFulfilled {
             switch self.state {
             case .Pending:
                 self.onFulfilled.append({ (value) -> Void in
-                    nextPromise.fulfill(onFulfilled(value))
+                    dispatch_async(dispatchQueue, {
+                        nextPromise.fulfill(onFulfilled(value))
+                    })
                 })
             case .Fulfilled(let value):
-                dispatch_async(dispatch_get_main_queue(), {
+                dispatch_async(dispatchQueue, {
                     nextPromise.fulfill(onFulfilled(value))
                 })
             case .Rejected(_):
@@ -136,21 +152,23 @@ public class Promise<T> {
         }
     }
 
-    private func appendOnRejected<U>(nextPromise: Promise<U>, _ onRejected: (NSError -> Void)?) {
+    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onRejected: (NSError -> Void)?) {
         if let onRejected = onRejected {
             switch self.state {
             case .Pending:
                 self.onRejected.append({ (error) -> Void in
-                    onRejected(error)
-                    nextPromise.reject(error)
+                    dispatch_async(dispatchQueue, {
+                        onRejected(error)
+                        nextPromise.reject(error)
+                    })
                 })
             case .Fulfilled(_):
                 return
             case .Rejected(let error):
-                dispatch_async(dispatch_get_main_queue(), {
+                dispatch_async(dispatchQueue, {
                     onRejected(error)
+                    nextPromise.reject(error)
                 })
-                nextPromise.reject(error)
             }
         }
     }
@@ -161,9 +179,7 @@ public class Promise<T> {
                 self.state = .Fulfilled(value)
 
                 for cb in self.onFulfilled {
-                    dispatch_async(dispatch_get_main_queue(), {
-                        cb(value)
-                    })
+                    cb(value)
                 }
             }
             else {
@@ -178,9 +194,7 @@ public class Promise<T> {
                 self.state = .Rejected(error)
 
                 for cb in self.onRejected {
-                    dispatch_async(dispatch_get_main_queue(), {
-                        cb(error)
-                    })
+                    cb(error)
                 }
             }
             else {
