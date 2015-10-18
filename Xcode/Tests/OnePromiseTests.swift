@@ -52,9 +52,94 @@ class OnePromiseTests: XCTestCase {
 
 }
 
+// MARK: onFulfilled
+extension OnePromiseTests {
+    func testOnFulfilledSequence() {
+        // Executation queue: we need serial queue for thread sefety
+        let serialQueue = dispatch_get_main_queue()
+
+        // Expectations: verify callbacks order
+        var i = 0
+        var expectations = [XCTestExpectation]()
+
+        expectations.append(self.expectationWithDescription("1"))
+        expectations.append(self.expectationWithDescription("2"))
+        expectations.append(self.expectationWithDescription("3"))
+        expectations.append(self.expectationWithDescription("4"))
+
+        // Promise and callback registration
+        let promise = Promise<Int>()
+
+        promise
+            .then(serialQueue, { (value) -> Void in
+                XCTAssertEqual(i, 0)
+                expectations[i++].fulfill()
+            })
+            .then(serialQueue, { (value) -> Void in
+                XCTAssertEqual(i, 3)
+                expectations[i++].fulfill()
+            })
+
+        promise.then(serialQueue, { (value) -> Void in
+            XCTAssertEqual(i, 1)
+            expectations[i++].fulfill()
+        })
+
+        promise.fulfill(1000)
+
+        promise.then(serialQueue, { (value) -> Void in
+            XCTAssertEqual(i, 2)
+            expectations[i++].fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testOnFulfilledNeverCalledIfAlreadyRejected() {
+        let expectation = self.expectationWithDescription("wait")
+
+        let promise = Promise<Int>()
+
+        promise.reject(NSError(domain: "", code: -1, userInfo: nil))
+
+        promise
+            .then({ (value) -> Promise<Int> in
+                XCTFail()
+                return Promise<Int>()
+            })
+            .then({ (value) in
+                XCTFail()
+            })
+
+        dispatch_async(dispatch_get_main_queue()) {
+            expectation.fulfill()
+        }
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testPropagateFulfillToChildPromises() {
+        let expectation = self.expectationWithDescription("wait")
+
+        let promise = Promise<Int>()
+
+        promise
+            .then(nil, { (e: NSError) in
+                XCTFail()
+            })
+            .then({ (value) in
+                XCTAssertEqual(value, 123)
+                expectation.fulfill()
+            })
+
+        promise.fulfill(123)
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: onRejected
 extension OnePromiseTests {
-
     func testOnRejectedSequence() {
         // Executation queue: we need serial queue for thread sefety
         let serialQueue = dispatch_get_main_queue()
@@ -103,14 +188,35 @@ extension OnePromiseTests {
 
         promise.fulfill(1)
 
-        promise.then(nil, { (e: NSError) -> Void in
-            XCTFail()
-        })
+        promise
+            .then(nil, { (e: NSError) -> Void in
+                XCTFail()
+            })
 
         dispatch_async(dispatch_get_main_queue()) {
             expectation.fulfill()
         }
         
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testPropagateRejectionToChildPromises() {
+        let expectation = self.expectationWithDescription("wait")
+
+        let promise = Promise<Int>()
+        let error   = NSError(domain: "dummy", code: 123, userInfo: nil)
+
+        promise
+            .then({ (value) in
+
+            })
+            .then(nil, { (e: NSError) in
+                XCTAssertEqual(e, error)
+                expectation.fulfill()
+            })
+
+        promise.reject(error)
+
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
