@@ -312,3 +312,20 @@ extension OnePromiseTests {
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
+
+// MARK: CustomStringConvertible
+extension OnePromiseTests {
+    func testDescription() {
+        let promise = Promise<Int>()
+
+        XCTAssertEqual("\(promise)", "Promise (Pending)")
+
+        promise.fulfill(10)
+        XCTAssertEqual("\(promise)", "Promise (Fulfilled)")
+
+        let promise2 = Promise<Int>()
+
+        promise2.reject(NSError(domain: "", code: -1, userInfo: nil))
+        XCTAssertEqual("\(promise2)", "Promise (Rejected)")
+    }
+}

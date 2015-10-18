@@ -60,6 +60,7 @@ private func performSync(block: () -> Void) {
     }
 }
 
+
 public class Promise<T> {
 
     public typealias ValueType = T
@@ -223,3 +224,11 @@ public class Promise<T> {
         }
     }
 }
+
+// MARK: CustomStringConvertible
+extension Promise: CustomStringConvertible {
+    public var description: String {
+        return "Promise (\(state))"
+    }
+}
+
