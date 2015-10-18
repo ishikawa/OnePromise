@@ -313,6 +313,25 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: State
+extension OnePromiseTests {
+    func testFulfilledStateMustNotTransitionToAnyOtherState() {
+        let expectation = self.expectationWithDescription("wait")
+
+        let promise = Promise<Int>()
+
+        promise.fulfill(10)
+        promise.fulfill(20)
+
+        promise.then({ (value) in
+            XCTAssertEqual(value, 10)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: CustomStringConvertible
 extension OnePromiseTests {
     func testDescription() {

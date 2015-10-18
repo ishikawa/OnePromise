@@ -7,6 +7,7 @@
 Bug fixes and more tests.
 
 - Fixed: Promise resolution is not propagated to child promises
+- 100% Test Coverage
 
 ## 0.1.0
 

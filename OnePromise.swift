@@ -197,11 +197,6 @@ public class Promise<T> {
 
                 self.onFulfilled.removeAll(keepCapacity: false)
             }
-            else {
-                #if DEBUG
-                    fatalError("\(self.state) must not transition to any other state.")
-                #endif
-            }
         }
     }
 
@@ -215,11 +210,6 @@ public class Promise<T> {
                 }
 
                 self.onRejected.removeAll(keepCapacity: false)
-            }
-            else {
-                #if DEBUG
-                    fatalError("\(self.state) must not transition to any other state.")
-                #endif
             }
         }
     }
