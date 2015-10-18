@@ -71,6 +71,11 @@ public class Promise<T> {
 
     }
 
+    public convenience init(block: Promise<T> -> Void) {
+        self.init()
+        block(self)
+    }
+
     public func then<U>(onFulfilled: ValueType -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
@@ -212,12 +217,5 @@ public class Promise<T> {
                 #endif
             }
         }
-    }
-}
-
-extension Promise {
-    convenience init(_ block: (Promise) -> Void) {
-        self.init()
-        block(self)
     }
 }

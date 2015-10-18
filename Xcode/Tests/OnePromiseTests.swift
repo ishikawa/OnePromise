@@ -4,6 +4,23 @@ import OnePromise
 
 class OnePromiseTests: XCTestCase {
 
+    func testCreateWithBlock() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise: Promise<Int> = Promise { (pr) in
+            dispatch_async(dispatch_get_main_queue()) {
+                pr.fulfill(1)
+            }
+        }
+
+        promise.then({ (value) -> Void in
+            XCTAssertEqual(value, 1)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
     func testExample() {
         let expectation = self.expectationWithDescription("done")
 
