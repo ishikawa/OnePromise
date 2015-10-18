@@ -49,7 +49,81 @@ class OnePromiseTests: XCTestCase {
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+}
 
+// MARK: child promise
+extension OnePromiseTests {
+    func testChildPromiseOfPendingPromise() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) in
+                Promise<Double> { (p) in
+                    dispatch_async(dispatch_get_main_queue()) {
+                        p.fulfill(Double(i))
+                    }
+                }
+            })
+            .then({ (d) -> Void in
+                XCTAssertEqualWithAccuracy(d, 2.0, accuracy: 0.01)
+                expectation.fulfill()
+            })
+
+        dispatch_async(dispatch_get_main_queue()) {
+            promise.fulfill(2)
+        }
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testChildPromiseOfPendingPromiseToBeRejected() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) in
+                Promise<Double> { (p) in
+                    dispatch_async(dispatch_get_main_queue()) {
+                        p.fulfill(Double(i))
+                    }
+                }
+            })
+            .then({ (d) -> Void in
+                XCTFail()
+            }, { (e: NSError) in
+                expectation.fulfill()
+            })
+
+        dispatch_async(dispatch_get_main_queue()) {
+            promise.reject(NSError(domain: "", code: -1, userInfo: nil))
+        }
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testChildPromiseOfFulfilledPromise() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise.fulfill(2)
+
+        promise
+            .then({ (i) in
+                Promise<Double> { (p) in
+                    p.fulfill(Double(i))
+                }
+            })
+            .then({ (d) -> Void in
+                XCTAssertEqualWithAccuracy(d, 2.0, accuracy: 0.01)
+                expectation.fulfill()
+            })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: onFulfilled
