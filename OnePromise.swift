@@ -20,12 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-public enum PromiseState<T>: CustomStringConvertible {
+private enum PromiseState<T>: CustomStringConvertible {
     case Pending
     case Fulfilled(T)
     case Rejected(NSError)
 
-    public var description: String {
+    var description: String {
         switch self {
         case .Pending:
             return "Pending"
