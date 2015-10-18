@@ -6,4 +6,3 @@ use_frameworks!
 target 'OnePromise_Tests', :exclusive => true do
   pod "OnePromise", :path => "../"
 end
-
