@@ -6,11 +6,13 @@ One of the Promises in Swift world just for fun :-)
 
 - Swift 2.0
 - No dependencies and fits into one file
+- 100% test coverage
 
 ## Installation
 
 1. Copy `OnePromise.swift` into your project.
 2. The `Promise` class is one and only one public. If you dislike, rename it as you want.
+3. Your project enforces "100% test coverage"?? Copy `OnePromiseTests.swift`.
 
 ## Installation (CocoaPods)
 
