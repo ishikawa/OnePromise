@@ -1,5 +1,11 @@
 # OnePromise
 
+
+[![CI Status](https://travis-ci.org/ishikawa/OnePromise.svg?branch=master)](https://travis-ci.org/Takanori Ishikawa/OnePromise)
+[![Version](https://img.shields.io/cocoapods/v/OnePromise.svg?style=flat)](http://cocoapods.org/pods/OnePromise)
+[![License](https://img.shields.io/cocoapods/l/OnePromise.svg?style=flat)](http://cocoapods.org/pods/OnePromise)
+[![Platform](https://img.shields.io/cocoapods/p/OnePromise.svg?style=flat)](http://cocoapods.org/pods/OnePromise)
+
 One of the Promises in Swift world just for fun :-)
 
 ## Features
