@@ -114,7 +114,13 @@ public class Promise<T> {
         let nextPromise = Promise<T>()
 
         performSync {
-            self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
+            if let onFulfilled = onFulfilled {
+                self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
+            }
+            else {
+                self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: { $0 })
+            }
+
             self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
 
@@ -138,11 +144,7 @@ public class Promise<T> {
         }
     }
 
-    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: (ValueType -> U)?) {
-        guard let onFulfilled = onFulfilled else {
-            return
-        }
-
+    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType -> U) {
         let onFulfilledAsync = { (value) -> Void in
             dispatch_async(dispatchQueue, {
                 nextPromise.fulfill(onFulfilled(value))
@@ -160,13 +162,9 @@ public class Promise<T> {
     }
 
     private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onRejected: (NSError -> Void)?) {
-        guard let onRejected = onRejected else {
-            return
-        }
-
         let onRejectedAsync = { (error: NSError) -> Void in
             dispatch_async(dispatchQueue, {
-                onRejected(error)
+                onRejected?(error)
                 nextPromise.reject(error)
             })
         }
