@@ -48,6 +48,9 @@ private let syncQueue: dispatch_queue_t = {
     return q
 }()
 
+/**
+    Perform given `block` in serial queue. Reentrant, dead lock free.
+*/
 private func performSync(block: () -> Void) {
     if dispatch_get_specific(&syncQueueTag) == nil {
         dispatch_sync(syncQueue, block)
@@ -136,7 +139,9 @@ public class Promise<T> {
 
         switch self.state {
         case .Pending:
-            self.onFulfilled.append(onFulfilledAsync)
+            performSync {
+                self.onFulfilled.append(onFulfilledAsync)
+            }
         case .Fulfilled(let value):
             onFulfilledAsync(value)
         case .Rejected(_):
@@ -153,7 +158,9 @@ public class Promise<T> {
 
         switch self.state {
         case .Pending:
-            self.onFulfilled.append(onFulfilledAsync)
+            performSync {
+                self.onFulfilled.append(onFulfilledAsync)
+            }
         case .Fulfilled(let value):
             onFulfilledAsync(value)
         case .Rejected(_):
@@ -171,7 +178,9 @@ public class Promise<T> {
 
         switch self.state {
         case .Pending:
-            self.onRejected.append(onRejectedAsync)
+            performSync {
+                self.onRejected.append(onRejectedAsync)
+            }
         case .Fulfilled(_):
             return
         case .Rejected(let error):
