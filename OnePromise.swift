@@ -114,16 +114,13 @@ public class Promise<T> {
     }
 
     public func then(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
+        // If onFulfilled is not nil, the compiler should choose generics function.
+        assert( onFulfilled == nil )
+
         let nextPromise = Promise<T>()
 
         performSync {
-            if let onFulfilled = onFulfilled {
-                self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
-            }
-            else {
-                self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: { $0 })
-            }
-
+            self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: { $0 })
             self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
 

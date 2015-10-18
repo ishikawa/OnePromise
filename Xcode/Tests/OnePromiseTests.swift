@@ -21,6 +21,24 @@ class OnePromiseTests: XCTestCase {
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
+    func testPromiseCallbackReturnsSameTypeAsValueType() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (value:Int) -> Int in
+                return value * 2
+            })
+            .then({ (value:Int) in
+                XCTAssertEqual(value, 2000)
+                expectation.fulfill()
+            })
+
+        promise.fulfill(1000)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
     func testExample() {
         let expectation = self.expectationWithDescription("done")
 
