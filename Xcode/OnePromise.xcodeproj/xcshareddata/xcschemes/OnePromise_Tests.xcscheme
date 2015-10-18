@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8612C339C1D92B957F88B66BCB2B8F99"
-               BuildableName = "OnePromise.framework"
-               BlueprintName = "OnePromise"
+               BlueprintIdentifier = "5DD9F0761426A1117D18C24E71B8FF90"
+               BuildableName = "Pods_OnePromise_Tests.framework"
+               BlueprintName = "Pods-OnePromise_Tests"
                ReferencedContainer = "container:Pods/Pods.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -40,6 +40,15 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "48421F07FC8A7AA179940CAFA3B9B106"
+            BuildableName = "OnePromise.framework"
+            BlueprintName = "OnePromise"
+            ReferencedContainer = "container:Pods/Pods.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <AdditionalOptions>
       </AdditionalOptions>
    </TestAction>
@@ -53,15 +62,6 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8612C339C1D92B957F88B66BCB2B8F99"
-            BuildableName = "OnePromise.framework"
-            BlueprintName = "OnePromise"
-            ReferencedContainer = "container:Pods/Pods.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>
@@ -71,15 +71,6 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8612C339C1D92B957F88B66BCB2B8F99"
-            BuildableName = "OnePromise.framework"
-            BlueprintName = "OnePromise"
-            ReferencedContainer = "container:Pods/Pods.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">
