@@ -1,6 +1,5 @@
 import UIKit
 import XCTest
-import OnePromise
 
 class OnePromiseTests: XCTestCase {
 
@@ -58,7 +57,7 @@ class OnePromiseTests: XCTestCase {
 
                 return np
             })
-            .then(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), { (s) in
+            .then(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { (s) in
                 XCTAssertEqual(s, "2000")
                 expectation.fulfill()
             })
@@ -313,7 +312,7 @@ extension OnePromiseTests {
     }
 }
 
-// MARK: onRejected
+// MARK: onRejected: Error propagation
 extension OnePromiseTests {
     enum SomeError: ErrorType {
         case IntError(Int)
@@ -321,15 +320,50 @@ extension OnePromiseTests {
 
     func testPropagateSwiftErrorType() {
         let expectation = self.expectationWithDescription("wait")
-
         let promise = Promise<Int>()
 
         promise
             .then({ (i) throws -> Void in
                 throw SomeError.IntError(i)
             })
-            .then(nil, { (e:NSError) in
-                // TODO NSError and ErrorType comparision
+            .then(nil, { (e: NSError) in
+                XCTAssertEqual(e.domain, "OnePromise_Tests.OnePromiseTests.SomeError")
+                expectation.fulfill()
+            })
+
+        promise.fulfill(1)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testPropagateNSError() {
+        let expectation = self.expectationWithDescription("wait")
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) throws -> Void in
+                throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
+            })
+            .then(nil, { (e: NSError) in
+                XCTAssertEqual(e.domain, "test.SomeError")
+                XCTAssertEqual(e.code, 123)
+                expectation.fulfill()
+            })
+
+        promise.fulfill(1)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testPropagateNSErrorInCallbackReturnsPromise() {
+        let expectation = self.expectationWithDescription("wait")
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) throws -> Promise<Int> in
+                throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
+            })
+            .then(nil, { (e: NSError) in
+                XCTAssertEqual(e.domain, "test.SomeError")
+                XCTAssertEqual(e.code, 123)
                 expectation.fulfill()
             })
 

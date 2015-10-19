@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import Foundation
+
 private enum PromiseState<T>: CustomStringConvertible {
     case Pending
     case Fulfilled(T)
