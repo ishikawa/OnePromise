@@ -312,7 +312,7 @@ extension OnePromiseTests {
     }
 }
 
-// MARK: onRejected
+// MARK: onRejected: Error propagation
 extension OnePromiseTests {
     enum SomeError: ErrorType {
         case IntError(Int)
@@ -320,7 +320,6 @@ extension OnePromiseTests {
 
     func testPropagateSwiftErrorType() {
         let expectation = self.expectationWithDescription("wait")
-
         let promise = Promise<Int>()
 
         promise
@@ -328,7 +327,43 @@ extension OnePromiseTests {
                 throw SomeError.IntError(i)
             })
             .then(nil, { (e:NSError) in
-                // TODO NSError and ErrorType comparision
+                XCTAssertEqual(e.domain, "OnePromise_Tests.OnePromiseTests.SomeError")
+                expectation.fulfill()
+            })
+
+        promise.fulfill(1)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testPropagateNSError() {
+        let expectation = self.expectationWithDescription("wait")
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) throws -> Void in
+                throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
+            })
+            .then(nil, { (e:NSError) in
+                XCTAssertEqual(e.domain, "test.SomeError")
+                XCTAssertEqual(e.code, 123)
+                expectation.fulfill()
+            })
+
+        promise.fulfill(1)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testPropagateNSErrorInCallbackReturnsPromise() {
+        let expectation = self.expectationWithDescription("wait")
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) throws -> Promise<Int> in
+                throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
+            })
+            .then(nil, { (e:NSError) in
+                XCTAssertEqual(e.domain, "test.SomeError")
+                XCTAssertEqual(e.code, 123)
                 expectation.fulfill()
             })
 
