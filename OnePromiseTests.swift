@@ -313,6 +313,31 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: onRejected
+extension OnePromiseTests {
+    enum SomeError: ErrorType {
+        case IntError(Int)
+    }
+
+    func testPropagateSwiftErrorType() {
+        let expectation = self.expectationWithDescription("wait")
+
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) throws -> Void in
+                throw SomeError.IntError(i)
+            })
+            .then(nil, { (e:NSError) in
+                // TODO NSError and ErrorType comparision
+                expectation.fulfill()
+            })
+
+        promise.fulfill(1)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: State
 extension OnePromiseTests {
     func testFulfilledStateMustNotTransitionToAnyOtherState() {

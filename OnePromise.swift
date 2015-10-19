@@ -80,19 +80,19 @@ public class Promise<T> {
         block(self)
     }
 
-    public func then<U>(onFulfilled: ValueType -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
+    public func then<U>(onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
-    public func then<U>(onFulfilled: ValueType -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
+    public func then<U>(onFulfilled: ValueType throws -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
-    public func then(onFulfilled: (ValueType -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
+    public func then(onFulfilled: (ValueType throws -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
-    public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
+    public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         let nextPromise = Promise<U>()
 
         performSync {
@@ -103,7 +103,7 @@ public class Promise<T> {
         return nextPromise
     }
 
-    public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
+    public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         let nextPromise = Promise<U>()
 
         performSync {
@@ -114,7 +114,7 @@ public class Promise<T> {
         return nextPromise
     }
 
-    public func then(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
+    public func then(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType throws -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
         // If onFulfilled is not nil, the compiler should choose generic function.
         assert( onFulfilled == nil )
 
@@ -128,10 +128,14 @@ public class Promise<T> {
         return nextPromise
     }
 
-    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType -> Promise<U>) {
-        let onFulfilledAsync = { (value) -> Void in
+    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType throws -> Promise<U>) {
+        let onFulfilledAsync = { (value: ValueType) -> Void in
             dispatch_async(dispatchQueue, {
-                onFulfilled(value).then(dispatchQueue, nextPromise.fulfill)
+                do {
+                    try onFulfilled(value).then(dispatchQueue, nextPromise.fulfill)
+                } catch let error as NSError {
+                    nextPromise.reject(error)
+                }
             })
         }
 
@@ -147,10 +151,15 @@ public class Promise<T> {
         }
     }
 
-    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType -> U) {
-        let onFulfilledAsync = { (value) -> Void in
+    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType throws -> U) {
+        let onFulfilledAsync = { (value: ValueType) -> Void in
             dispatch_async(dispatchQueue, {
-                nextPromise.fulfill(onFulfilled(value))
+                do {
+                    let nextValue = try onFulfilled(value)
+                    nextPromise.fulfill(nextValue)
+                } catch let error as NSError {
+                    nextPromise.reject(error)
+                }
             })
         }
 
