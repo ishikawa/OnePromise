@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		5BC6C354E8479B49080BCCE7 /* Pods_OnePromise_Tests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B5EA1356315F0B464FA4E3 /* Pods_OnePromise_Tests.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		607FACEC1AFB9204008FA782 /* OnePromiseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACEB1AFB9204008FA782 /* OnePromiseTests.swift */; };
+		A5A1E6B81BD53564005CC35A /* OnePromise.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A1E6B71BD53564005CC35A /* OnePromise.swift */; settings = {ASSET_TAGS = (); }; };
+		A5A1E6BA1BD53595005CC35A /* FrameworkImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A1E6B91BD53595005CC35A /* FrameworkImportTests.swift */; settings = {ASSET_TAGS = (); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -16,6 +18,8 @@
 		607FACEA1AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
 		607FACEB1AFB9204008FA782 /* OnePromiseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnePromiseTests.swift; path = ../OnePromiseTests.swift; sourceTree = SOURCE_ROOT; };
 		70B5EA1356315F0B464FA4E3 /* Pods_OnePromise_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_OnePromise_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5A1E6B71BD53564005CC35A /* OnePromise.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = OnePromise.swift; path = ../OnePromise.swift; sourceTree = "<group>"; };
+		A5A1E6B91BD53595005CC35A /* FrameworkImportTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkImportTests.swift; sourceTree = "<group>"; };
 		D396C96D272ECFEA687D2682 /* Pods-OnePromise_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OnePromise_Tests.release.xcconfig"; path = "Pods/Target Support Files/Pods-OnePromise_Tests/Pods-OnePromise_Tests.release.xcconfig"; sourceTree = "<group>"; };
 		F072A273B04F4BACDF09FC34 /* Pods-OnePromise_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OnePromise_Tests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-OnePromise_Tests/Pods-OnePromise_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -35,7 +39,9 @@
 		607FACC71AFB9204008FA782 = {
 			isa = PBXGroup;
 			children = (
+				A5A1E6B71BD53564005CC35A /* OnePromise.swift */,
 				607FACEB1AFB9204008FA782 /* OnePromiseTests.swift */,
+				A5A1E6B91BD53595005CC35A /* FrameworkImportTests.swift */,
 				A573E2B71BD45F28008DF350 /* Support Files */,
 				607FACD11AFB9204008FA782 /* Products */,
 				A83AD5D9B3CAF14D1CE2DA2A /* Pods */,
@@ -195,7 +201,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5A1E6B81BD53564005CC35A /* OnePromise.swift in Sources */,
 				607FACEC1AFB9204008FA782 /* OnePromiseTests.swift in Sources */,
+				A5A1E6BA1BD53595005CC35A /* FrameworkImportTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
