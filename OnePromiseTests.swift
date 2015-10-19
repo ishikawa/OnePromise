@@ -326,7 +326,7 @@ extension OnePromiseTests {
             .then({ (i) throws -> Void in
                 throw SomeError.IntError(i)
             })
-            .then(nil, { (e:NSError) in
+            .then(nil, { (e: NSError) in
                 XCTAssertEqual(e.domain, "OnePromise_Tests.OnePromiseTests.SomeError")
                 expectation.fulfill()
             })
@@ -343,7 +343,7 @@ extension OnePromiseTests {
             .then({ (i) throws -> Void in
                 throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
             })
-            .then(nil, { (e:NSError) in
+            .then(nil, { (e: NSError) in
                 XCTAssertEqual(e.domain, "test.SomeError")
                 XCTAssertEqual(e.code, 123)
                 expectation.fulfill()
@@ -361,7 +361,7 @@ extension OnePromiseTests {
             .then({ (i) throws -> Promise<Int> in
                 throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
             })
-            .then(nil, { (e:NSError) in
+            .then(nil, { (e: NSError) in
                 XCTAssertEqual(e.domain, "test.SomeError")
                 XCTAssertEqual(e.code, 123)
                 expectation.fulfill()
