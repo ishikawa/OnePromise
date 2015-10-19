@@ -67,9 +67,9 @@ public class Promise<T> {
 
     private var state: PromiseState<ValueType> = .Pending
 
-    private var onFulfilled: [(ValueType) -> Void] = []
+    private var fulfillCallbacks: [(ValueType) -> Void] = []
 
-    private var onRejected: [(NSError) -> Void] = []
+    private var rejectCallbacks: [(NSError) -> Void] = []
 
     public init() {
 
@@ -115,7 +115,7 @@ public class Promise<T> {
     }
 
     public func then(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
-        // If onFulfilled is not nil, the compiler should choose generics function.
+        // If onFulfilled is not nil, the compiler should choose generic function.
         assert( onFulfilled == nil )
 
         let nextPromise = Promise<T>()
@@ -138,7 +138,7 @@ public class Promise<T> {
         switch self.state {
         case .Pending:
             performSync {
-                self.onFulfilled.append(onFulfilledAsync)
+                self.fulfillCallbacks.append(onFulfilledAsync)
             }
         case .Fulfilled(let value):
             onFulfilledAsync(value)
@@ -157,7 +157,7 @@ public class Promise<T> {
         switch self.state {
         case .Pending:
             performSync {
-                self.onFulfilled.append(onFulfilledAsync)
+                self.fulfillCallbacks.append(onFulfilledAsync)
             }
         case .Fulfilled(let value):
             onFulfilledAsync(value)
@@ -177,7 +177,7 @@ public class Promise<T> {
         switch self.state {
         case .Pending:
             performSync {
-                self.onRejected.append(onRejectedAsync)
+                self.rejectCallbacks.append(onRejectedAsync)
             }
         case .Fulfilled(_):
             return
@@ -191,11 +191,11 @@ public class Promise<T> {
             if case .Pending = self.state {
                 self.state = .Fulfilled(value)
 
-                for cb in self.onFulfilled {
+                for cb in self.fulfillCallbacks {
                     cb(value)
                 }
 
-                self.onFulfilled.removeAll(keepCapacity: false)
+                self.fulfillCallbacks.removeAll(keepCapacity: false)
             }
         }
     }
@@ -205,11 +205,11 @@ public class Promise<T> {
             if case .Pending = self.state {
                 self.state = .Rejected(error)
 
-                for cb in self.onRejected {
+                for cb in self.rejectCallbacks {
                     cb(error)
                 }
 
-                self.onRejected.removeAll(keepCapacity: false)
+                self.rejectCallbacks.removeAll(keepCapacity: false)
             }
         }
     }
