@@ -57,7 +57,7 @@ class OnePromiseTests: XCTestCase {
 
                 return np
             })
-            .then(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), { (s) in
+            .then(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { (s) in
                 XCTAssertEqual(s, "2000")
                 expectation.fulfill()
             })
