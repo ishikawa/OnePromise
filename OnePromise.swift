@@ -134,7 +134,7 @@ public class Promise<T> {
         let onFulfilledAsync = { (value: ValueType) -> Void in
             dispatch_async(dispatchQueue, {
                 do {
-                    try onFulfilled(value).then(dispatchQueue, nextPromise.fulfill)
+                    try onFulfilled(value).then(dispatchQueue, nextPromise.fulfill, nextPromise.reject)
                 } catch let error as NSError {
                     nextPromise.reject(error)
                 }
