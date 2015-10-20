@@ -434,6 +434,22 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: fin
+extension OnePromiseTests {
+    func testFin() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise.fin({
+            expectation.fulfill()
+        })
+
+        promise.fulfill(1)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: Helpers
 extension OnePromiseTests {
     private func generateRandomError() -> NSError {
@@ -442,3 +458,4 @@ extension OnePromiseTests {
         return NSError(domain: "test.SomeError", code: code, userInfo: nil)
     }
 }
+
