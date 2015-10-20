@@ -236,32 +236,32 @@ extension Promise: CustomStringConvertible {
 // MARK: fin (finally)
 extension Promise {
 
-    class func fulfill<T>(value: T) -> Promise<T> {
-        return Promise<T> { $0.fulfill(value) }
-    }
-
     /**
     
     `fin` will be invoked regardless of the promise is fulfilled or rejected, allows you to
     observe either fulfillment or rejection of the promise.
 
     - parameter callback
-    - returns:  A Promise which will be resolved with the same fulfillment value or or
-                rejection reason as receiver. If `callback` returns a promise,
-                the resolution of the returned promise will be delayed until the promise 
-                returned from `callback` is finished.
+    - returns:  A Promise which will be resolved with the same fulfillment value or
+                rejection reason as receiver.
 
+    ### TODO
+
+    If `callback` returns a promise, the resolution of the returned promise will be delayed until
+    the promise returned from `callback` is finished.
     */
-    public func fin<U>(dispatchQueue: dispatch_queue_t, _ callback: () -> U) -> Promise<ValueType> {
+    public func fin(dispatchQueue: dispatch_queue_t, _ callback: () -> Void) -> Promise<ValueType> {
         return self.then(dispatchQueue,
-            { (value: ValueType) -> Promise<ValueType> in
-                Promise.fulfill(callback()).then(dispatchQueue, { (_) in value })
+            { (value) -> ValueType in
+                callback()
+                return value
             },
             { (error: NSError) in
-                Promise.fulfill(callback()).then(dispatchQueue, { (_) throws in throw error })
+                callback()
             })
     }
-    public func fin<U>(callback: () -> U) -> Promise<ValueType> {
+
+    public func fin(callback: () -> Void) -> Promise<ValueType> {
         return fin(dispatch_get_main_queue(), callback)
     }
 }
