@@ -233,3 +233,42 @@ extension Promise: CustomStringConvertible {
     }
 }
 
+// MARK: fin (finally)
+extension Promise {
+
+    /**
+    
+    `fin` will be invoked regardless of the promise is fulfilled or rejected, allows you to
+    observe either fulfillment or rejection of the promise.
+
+    - parameter callback
+    - returns:  A Promise which will be resolved with the same fulfillment value or
+                rejection reason as receiver.
+
+    ### Limitations
+
+    [Promises/A+](https://promisesaplus.com/#notes) allows `onRejected` returns a value or Promise,
+    or throws error. OnePromise, however, `onRejected` signature is `(NSError) -> Void`.
+    Because of this, we can not implement `finally()` method like
+    [Q](https://github.com/kriskowal/q/wiki/API-Reference#promisefinallycallback).
+
+    ### TODO
+
+    If `callback` returns a promise, the resolution of the returned promise will be delayed until
+    the promise returned from `callback` is finished.
+    */
+    public func fin(dispatchQueue: dispatch_queue_t, _ callback: () -> Void) -> Promise<ValueType> {
+        return self.then(dispatchQueue,
+            { (value) -> ValueType in
+                callback()
+                return value
+            },
+            { (error: NSError) in
+                callback()
+            })
+    }
+
+    public func fin(callback: () -> Void) -> Promise<ValueType> {
+        return fin(dispatch_get_main_queue(), callback)
+    }
+}
