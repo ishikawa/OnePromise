@@ -115,7 +115,7 @@ extension OnePromiseTests {
             })
 
         dispatch_async(dispatch_get_main_queue()) {
-            promise.reject(NSError(domain: "", code: -1, userInfo: nil))
+            promise.reject(self.generateRandomError())
         }
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
@@ -191,7 +191,7 @@ extension OnePromiseTests {
 
         let promise = Promise<Int>()
 
-        promise.reject(NSError(domain: "", code: -1, userInfo: nil))
+        promise.reject(self.generateRandomError())
 
         promise
             .then({ (value) -> Promise<Int> in
@@ -245,6 +245,7 @@ extension OnePromiseTests {
         expectations.append(self.expectationWithDescription("4"))
 
         // Promise and callback registration
+        let error   = self.generateRandomError()
         let promise = Promise<Int>()
 
         promise
@@ -262,7 +263,7 @@ extension OnePromiseTests {
             expectations[i++].fulfill()
         })
 
-        promise.reject(NSError(domain: "", code: -1, userInfo: nil))
+        promise.reject(error)
 
         promise.then(serialQueue, nil, { (e: NSError) -> Void in
             XCTAssertEqual(i, 2)
@@ -295,7 +296,7 @@ extension OnePromiseTests {
         let expectation = self.expectationWithDescription("wait")
 
         let promise = Promise<Int>()
-        let error   = NSError(domain: "dummy", code: 123, userInfo: nil)
+        let error   = self.generateRandomError()
 
         promise
             .then({ (value) in
@@ -337,15 +338,16 @@ extension OnePromiseTests {
 
     func testPropagateNSError() {
         let expectation = self.expectationWithDescription("wait")
+
+        let error   = self.generateRandomError()
         let promise = Promise<Int>()
 
         promise
             .then({ (i) throws -> Void in
-                throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
+                throw error
             })
             .then(nil, { (e: NSError) in
-                XCTAssertEqual(e.domain, "test.SomeError")
-                XCTAssertEqual(e.code, 123)
+                XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
 
@@ -355,15 +357,16 @@ extension OnePromiseTests {
 
     func testPropagateNSErrorInCallbackReturnsPromise() {
         let expectation = self.expectationWithDescription("wait")
+
+        let error   = self.generateRandomError()
         let promise = Promise<Int>()
 
         promise
             .then({ (i) throws -> Promise<Int> in
-                throw NSError(domain: "test.SomeError", code: 123, userInfo: nil)
+                throw error
             })
             .then(nil, { (e: NSError) in
-                XCTAssertEqual(e.domain, "test.SomeError")
-                XCTAssertEqual(e.code, 123)
+                XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
 
