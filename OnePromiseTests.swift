@@ -1,6 +1,16 @@
 import UIKit
 import XCTest
 
+private var testQueueTag = 0xbeaf
+
+private let kOnePromiseTestsQueue: dispatch_queue_t = {
+    let q = dispatch_queue_create("jp.ko9.OnePromiseTest", DISPATCH_QUEUE_CONCURRENT)
+
+    dispatch_queue_set_specific(q, &testQueueTag, &testQueueTag, nil)
+
+    return q
+    }()
+
 class OnePromiseTests: XCTestCase {
 
     func testCreateWithBlock() {
@@ -37,18 +47,22 @@ class OnePromiseTests: XCTestCase {
         promise.fulfill(1000)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+}
 
-    func testExample() {
+// MARK: Dispatch Queue
+extension OnePromiseTests {
+    func testDispatchQueue() {
         let expectation = self.expectationWithDescription("done")
 
         let promise = Promise<Int>()
 
         promise
-            .then({
-                $0 * 2
+            .then({ (i) -> Int in
+                XCTAssertFalse(self.isInTestDispatchQueue())
+                return i * 2
             })
-            .then({ (i) -> Promise<String> in
-
+            .then(kOnePromiseTestsQueue, { (i) -> Promise<String> in
+                XCTAssertTrue(self.isInTestDispatchQueue())
                 XCTAssertEqual(i, 2000)
 
                 let np = Promise<String>()
@@ -57,13 +71,14 @@ class OnePromiseTests: XCTestCase {
 
                 return np
             })
-            .then(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { (s) in
+            .then(kOnePromiseTestsQueue, { (s) in
+                XCTAssertTrue(self.isInTestDispatchQueue())
                 XCTAssertEqual(s, "2000")
+
                 expectation.fulfill()
             })
 
         promise.fulfill(1000)
-
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
@@ -448,6 +463,36 @@ extension OnePromiseTests {
         promise.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+
+    func testFinWithRejection() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise.fin({
+            expectation.fulfill()
+        })
+
+        promise.reject(self.generateRandomError())
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testThenFin() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (_) -> Void in
+
+            })
+            .fin({
+                expectation.fulfill()
+            })
+
+        promise.reject(self.generateRandomError())
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: Helpers
@@ -456,6 +501,10 @@ extension OnePromiseTests {
         let code = Int(arc4random_uniform(101) + 100)
 
         return NSError(domain: "test.SomeError", code: code, userInfo: nil)
+    }
+
+    private func isInTestDispatchQueue() -> Bool {
+        return dispatch_get_specific(&testQueueTag) != nil
     }
 }
 
