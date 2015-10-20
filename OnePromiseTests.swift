@@ -449,6 +449,40 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: fail
+extension OnePromiseTests {
+    func testFail() {
+        let expectation = self.expectationWithDescription("done")
+
+        let error   = self.generateRandomError()
+        let promise = Promise<Int>()
+
+        promise.fail({
+            XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        promise.reject(error)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testFailWithDispatchQueue() {
+        let expectation = self.expectationWithDescription("done")
+
+        let error   = self.generateRandomError()
+        let promise = Promise<Int>()
+
+        promise.fail(kOnePromiseTestsQueue, {
+            XCTAssertTrue(self.isInTestDispatchQueue())
+            XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        promise.reject(error)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: fin
 extension OnePromiseTests {
     func testFin() {
@@ -607,7 +641,7 @@ extension OnePromiseTests {
 // MARK: Helpers
 extension OnePromiseTests {
     private func generateRandomError() -> NSError {
-        let code = Int(arc4random_uniform(101) + 100)
+        let code = Int(arc4random_uniform(10001))
 
         return NSError(domain: "test.SomeError", code: code, userInfo: nil)
     }

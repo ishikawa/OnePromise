@@ -233,6 +233,23 @@ extension Promise: CustomStringConvertible {
     }
 }
 
+// MARK: fail (catch)
+extension Promise {
+    /**
+    `fail` is sugar, equivalent to `promise.then(nil, onRejected)`.
+    
+    Most other Promise libraries have `catch` method, which is reserved
+    keyword in Swift 2.0.
+    */
+    public func fail(dispatchQueue: dispatch_queue_t, _ onRejected: (NSError) -> Void) -> Promise<ValueType> {
+        return self.then(dispatchQueue, nil, onRejected)
+    }
+
+    public func fail(onRejected: (NSError) -> Void) -> Promise<ValueType> {
+        return self.fail(dispatch_get_main_queue(), onRejected)
+    }
+}
+
 // MARK: fin (finally)
 extension Promise {
 
