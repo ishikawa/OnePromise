@@ -370,6 +370,29 @@ extension OnePromiseTests {
         promise.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+
+    /// An error occurred in a child promise should be propagated to
+    /// following promises.
+    func testErrorPropagationFromChildPromise() {
+        let expectation = self.expectationWithDescription("wait")
+
+        let error   = self.generateRandomError()
+        let promise = Promise<Int>()
+
+        promise
+            .then({ (i) throws -> Promise<Int> in
+                return Promise<Int> { (promise) in
+                    promise.reject(error)
+                }
+            })
+            .then(nil, { (e: NSError) in
+                XCTAssertEqual(e, error)
+                expectation.fulfill()
+            })
+
+        promise.fulfill(1)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: State
@@ -405,5 +428,14 @@ extension OnePromiseTests {
 
         promise2.reject(NSError(domain: "", code: -1, userInfo: nil))
         XCTAssertEqual("\(promise2)", "Promise (Rejected)")
+    }
+}
+
+// MARK: Helpers
+extension OnePromiseTests {
+    private func generateRandomError() -> NSError {
+        let code = Int(arc4random_uniform(101) + 100)
+
+        return NSError(domain: "test.SomeError", code: code, userInfo: nil)
     }
 }
