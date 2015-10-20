@@ -245,6 +245,13 @@ extension Promise {
     - returns:  A Promise which will be resolved with the same fulfillment value or
                 rejection reason as receiver.
 
+    ### Limitations
+
+    [Promises/A+](https://promisesaplus.com/#notes) allows `onRejected` returns a value or Promise,
+    or throws error. OnePromise, however, `onRejected` signature is `(NSError) -> Void`.
+    Because of this, we can not implement `finally()` method like
+    [Q](https://github.com/kriskowal/q/wiki/API-Reference#promisefinallycallback).
+
     ### TODO
 
     If `callback` returns a promise, the resolution of the returned promise will be delayed until
