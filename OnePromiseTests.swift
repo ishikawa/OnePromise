@@ -449,14 +449,48 @@ extension OnePromiseTests {
     }
 }
 
-// MARK: fin
+// MARK: caught
+extension OnePromiseTests {
+    func testFail() {
+        let expectation = self.expectationWithDescription("done")
+
+        let error   = self.generateRandomError()
+        let promise = Promise<Int>()
+
+        promise.caught({
+            XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        promise.reject(error)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testFailWithDispatchQueue() {
+        let expectation = self.expectationWithDescription("done")
+
+        let error   = self.generateRandomError()
+        let promise = Promise<Int>()
+
+        promise.caught(kOnePromiseTestsQueue, {
+            XCTAssertTrue(self.isInTestDispatchQueue())
+            XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        promise.reject(error)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
+// MARK: finally
 extension OnePromiseTests {
     func testFin() {
         let expectation = self.expectationWithDescription("done")
 
         let promise = Promise<Int>()
 
-        promise.fin({
+        promise.finally({
             expectation.fulfill()
         })
 
@@ -469,7 +503,7 @@ extension OnePromiseTests {
 
         let promise = Promise<Int>()
 
-        promise.fin(kOnePromiseTestsQueue, {
+        promise.finally(kOnePromiseTestsQueue, {
             XCTAssertTrue(self.isInTestDispatchQueue())
             expectation.fulfill()
         })
@@ -483,7 +517,7 @@ extension OnePromiseTests {
 
         let promise = Promise<Int>()
 
-        promise.fin({
+        promise.finally({
             expectation.fulfill()
         })
 
@@ -500,7 +534,7 @@ extension OnePromiseTests {
             .then({ (_) -> Void in
 
             })
-            .fin({
+            .finally({
                 expectation.fulfill()
             })
 
@@ -516,7 +550,7 @@ extension OnePromiseTests {
         let promise = Promise<Int>()
 
         promise
-            .fin({ return "string" })
+            .finally({ return "string" })
             .then({
                 XCTAssertEqual($0, 1000)
                 expectation.fulfill()
@@ -533,7 +567,7 @@ extension OnePromiseTests {
         let promise = Promise<Int>()
 
         promise
-            .fin({ return "string" })
+            .finally({ return "string" })
             .then(nil, { (e) in
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
@@ -551,10 +585,10 @@ extension OnePromiseTests {
         let cbPromise = Promise<Void>()
         var completed = false
 
-        cbPromise.fin({ completed = true })
+        cbPromise.finally({ completed = true })
 
         promise
-            .fin({ return cbPromise })
+            .finally({ return cbPromise })
             .then({
                 XCTAssertTrue(completed)
                 XCTAssertEqual($0, 2000)
@@ -581,10 +615,10 @@ extension OnePromiseTests {
         let cbPromise = Promise<Void>()
         var completed = false
 
-        cbPromise.fin({ completed = true })
+        cbPromise.finally({ completed = true })
 
         promise
-            .fin({ return cbPromise })
+            .finally({ return cbPromise })
             .then(nil, { (e) in
                 XCTAssertTrue(completed)
                 XCTAssertEqual(e, error)
@@ -607,7 +641,7 @@ extension OnePromiseTests {
 // MARK: Helpers
 extension OnePromiseTests {
     private func generateRandomError() -> NSError {
-        let code = Int(arc4random_uniform(101) + 100)
+        let code = Int(arc4random_uniform(10001))
 
         return NSError(domain: "test.SomeError", code: code, userInfo: nil)
     }

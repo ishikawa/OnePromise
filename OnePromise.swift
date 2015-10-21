@@ -62,7 +62,6 @@ private func performSync(block: () -> Void) {
     }
 }
 
-
 public class Promise<T> {
 
     public typealias ValueType = T
@@ -233,17 +232,21 @@ extension Promise: CustomStringConvertible {
     }
 }
 
-// MARK: fin (finally)
+// MARK: catch and finally
 extension Promise {
+    /// `caught` is sugar, equivalent to `promise.then(nil, onRejected)`.
+    public func caught(dispatchQueue: dispatch_queue_t, _ onRejected: (NSError) -> Void) -> Promise<ValueType> {
+        return self.then(dispatchQueue, nil, onRejected)
+    }
 
     /**
-    
-    `fin` will be invoked regardless of the promise is fulfilled or rejected, allows you to
+
+    `finally` will be invoked regardless of the promise is fulfilled or rejected, allows you to
     observe either fulfillment or rejection of the promise.
 
     - parameter callback
     - returns:  A Promise which will be resolved with the same fulfillment value or
-                rejection reason as receiver.
+    rejection reason as receiver.
 
     ### Limitations
 
@@ -256,8 +259,9 @@ extension Promise {
 
     If `callback` returns a promise, the resolution of the returned promise will be delayed until
     the promise returned from `callback` is finished.
+
     */
-    public func fin(dispatchQueue: dispatch_queue_t, _ callback: () -> Void) -> Promise<ValueType> {
+    public func finally(dispatchQueue: dispatch_queue_t, _ callback: () -> Void) -> Promise<ValueType> {
         return self.then(dispatchQueue,
             { (value) -> ValueType in
                 callback()
@@ -265,10 +269,13 @@ extension Promise {
             },
             { (error: NSError) in
                 callback()
-            })
+        })
     }
 
-    public func fin(callback: () -> Void) -> Promise<ValueType> {
-        return fin(dispatch_get_main_queue(), callback)
+    public func caught(onRejected: (NSError) -> Void) -> Promise<ValueType> {
+        return self.caught(dispatch_get_main_queue(), onRejected)
+    }
+    public func finally(callback: () -> Void) -> Promise<ValueType> {
+        return finally(dispatch_get_main_queue(), callback)
     }
 }
