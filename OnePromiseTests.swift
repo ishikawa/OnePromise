@@ -449,7 +449,7 @@ extension OnePromiseTests {
     }
 }
 
-// MARK: fail
+// MARK: caught
 extension OnePromiseTests {
     func testFail() {
         let expectation = self.expectationWithDescription("done")
@@ -457,7 +457,7 @@ extension OnePromiseTests {
         let error   = self.generateRandomError()
         let promise = Promise<Int>()
 
-        promise.fail({
+        promise.caught({
             XCTAssertEqual($0, error)
             expectation.fulfill()
         })
@@ -472,7 +472,7 @@ extension OnePromiseTests {
         let error   = self.generateRandomError()
         let promise = Promise<Int>()
 
-        promise.fail(kOnePromiseTestsQueue, {
+        promise.caught(kOnePromiseTestsQueue, {
             XCTAssertTrue(self.isInTestDispatchQueue())
             XCTAssertEqual($0, error)
             expectation.fulfill()
@@ -483,14 +483,14 @@ extension OnePromiseTests {
     }
 }
 
-// MARK: fin
+// MARK: finally
 extension OnePromiseTests {
     func testFin() {
         let expectation = self.expectationWithDescription("done")
 
         let promise = Promise<Int>()
 
-        promise.fin({
+        promise.finally({
             expectation.fulfill()
         })
 
@@ -503,7 +503,7 @@ extension OnePromiseTests {
 
         let promise = Promise<Int>()
 
-        promise.fin(kOnePromiseTestsQueue, {
+        promise.finally(kOnePromiseTestsQueue, {
             XCTAssertTrue(self.isInTestDispatchQueue())
             expectation.fulfill()
         })
@@ -517,7 +517,7 @@ extension OnePromiseTests {
 
         let promise = Promise<Int>()
 
-        promise.fin({
+        promise.finally({
             expectation.fulfill()
         })
 
@@ -534,7 +534,7 @@ extension OnePromiseTests {
             .then({ (_) -> Void in
 
             })
-            .fin({
+            .finally({
                 expectation.fulfill()
             })
 
@@ -550,7 +550,7 @@ extension OnePromiseTests {
         let promise = Promise<Int>()
 
         promise
-            .fin({ return "string" })
+            .finally({ return "string" })
             .then({
                 XCTAssertEqual($0, 1000)
                 expectation.fulfill()
@@ -567,7 +567,7 @@ extension OnePromiseTests {
         let promise = Promise<Int>()
 
         promise
-            .fin({ return "string" })
+            .finally({ return "string" })
             .then(nil, { (e) in
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
@@ -585,10 +585,10 @@ extension OnePromiseTests {
         let cbPromise = Promise<Void>()
         var completed = false
 
-        cbPromise.fin({ completed = true })
+        cbPromise.finally({ completed = true })
 
         promise
-            .fin({ return cbPromise })
+            .finally({ return cbPromise })
             .then({
                 XCTAssertTrue(completed)
                 XCTAssertEqual($0, 2000)
@@ -615,10 +615,10 @@ extension OnePromiseTests {
         let cbPromise = Promise<Void>()
         var completed = false
 
-        cbPromise.fin({ completed = true })
+        cbPromise.finally({ completed = true })
 
         promise
-            .fin({ return cbPromise })
+            .finally({ return cbPromise })
             .then(nil, { (e) in
                 XCTAssertTrue(completed)
                 XCTAssertEqual(e, error)
