@@ -6,6 +6,7 @@
 
 - Error propagation from onFulfill callback
 - Fix iOS7 compatibility issues
+- Add `caught` and `finally` methods.
 
 ## 0.2.1
 
