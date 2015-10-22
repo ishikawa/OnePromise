@@ -343,7 +343,7 @@ extension OnePromiseTests {
                 throw SomeError.IntError(i)
             })
             .then(nil, { (e: NSError) in
-                XCTAssertEqual(e.domain, "OnePromise_Tests.OnePromiseTests.SomeError")
+                XCTAssertTrue(e.domain.hasSuffix(".OnePromiseTests.SomeError"))
                 expectation.fulfill()
             })
 
