@@ -449,6 +449,43 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: resolve and reject
+extension OnePromiseTests {
+    func testResolve() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>.resolve(100)
+
+        promise.then({
+            XCTAssertEqual($0, 100)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testResolveWithPromise() {
+        let promise1 = Promise<Int>()
+        let promise2 = Promise<Int>.resolve(promise1)
+
+        XCTAssertTrue(promise1 === promise2)
+    }
+
+    func testRejectedPromise() {
+        let expectation = self.expectationWithDescription("done")
+
+        let error   = self.generateRandomError()
+        let promise = Promise<Int>.reject(error)
+
+        promise.caught({
+            XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: caught
 extension OnePromiseTests {
     func testFail() {
@@ -541,101 +578,6 @@ extension OnePromiseTests {
         promise.reject(self.generateRandomError())
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
-
-/// TODO
-/*
-    func testFinPromise() {
-        let expectation = self.expectationWithDescription("done")
-
-        let promise = Promise<Int>()
-
-        promise
-            .finally({ return "string" })
-            .then({
-                XCTAssertEqual($0, 1000)
-                expectation.fulfill()
-            })
-
-        promise.fulfill(1000)
-        self.waitForExpectationsWithTimeout(1.0, handler: nil)
-    }
-
-    func testFinPromiseRejection() {
-        let expectation = self.expectationWithDescription("done")
-
-        let error   = self.generateRandomError()
-        let promise = Promise<Int>()
-
-        promise
-            .finally({ return "string" })
-            .then(nil, { (e) in
-                XCTAssertEqual(e, error)
-                expectation.fulfill()
-            })
-
-        promise.reject(error)
-        self.waitForExpectationsWithTimeout(1.0, handler: nil)
-    }
-
-    func testFinPromiseDelay() {
-        let expectation = self.expectationWithDescription("done")
-
-        let promise = Promise<Int>()
-
-        let cbPromise = Promise<Void>()
-        var completed = false
-
-        cbPromise.finally({ completed = true })
-
-        promise
-            .finally({ return cbPromise })
-            .then({
-                XCTAssertTrue(completed)
-                XCTAssertEqual($0, 2000)
-                expectation.fulfill()
-            })
-
-        promise.fulfill(2000)
-
-        dispatch_after(
-            dispatch_time(DISPATCH_TIME_NOW, Int64(0.5 * Double(NSEC_PER_SEC))),
-            dispatch_get_main_queue(), {
-                cbPromise.fulfill()
-            })
-
-        self.waitForExpectationsWithTimeout(3.0, handler: nil)
-    }
-
-    func testFinPromiseDelayRejection() {
-        let expectation = self.expectationWithDescription("done")
-
-        let error   = self.generateRandomError()
-        let promise = Promise<Int>()
-
-        let cbPromise = Promise<Void>()
-        var completed = false
-
-        cbPromise.finally({ completed = true })
-
-        promise
-            .finally({ return cbPromise })
-            .then(nil, { (e) in
-                XCTAssertTrue(completed)
-                XCTAssertEqual(e, error)
-                expectation.fulfill()
-            })
-
-        promise.reject(error)
-
-        dispatch_after(
-            dispatch_time(DISPATCH_TIME_NOW, Int64(0.5 * Double(NSEC_PER_SEC))),
-            dispatch_get_main_queue(), {
-                cbPromise.fulfill()
-            })
-
-        self.waitForExpectationsWithTimeout(3.0, handler: nil)
-    }
-*/
 }
 
 // MARK: Helpers

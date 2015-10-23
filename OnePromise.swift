@@ -232,6 +232,29 @@ extension Promise: CustomStringConvertible {
     }
 }
 
+// MARK: resolve and reject
+extension Promise {
+    /**
+
+    Create a promise that is resolved with given value.
+
+    If `value` is a Promise, returns the promise.
+    If `value` is not a Promise, returns a promise that is fulfilled with `value`.
+    */
+    class func resolve<T>(value: Promise<T>) -> Promise<T> {
+        return value
+    }
+
+    class func resolve<T>(value: T) -> Promise<T> {
+        return Promise<T> { $0.fulfill(value) }
+    }
+
+    /// Create a promise that is rejected with given error.
+    class func reject(error: NSError) -> Promise<T> {
+        return Promise<T> { $0.reject(error) }
+    }
+}
+
 // MARK: catch and finally
 extension Promise {
     /// `caught` is sugar, equivalent to `promise.then(nil, onRejected)`.
