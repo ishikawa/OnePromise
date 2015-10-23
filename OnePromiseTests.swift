@@ -449,6 +449,43 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: resolve and reject
+extension OnePromiseTests {
+    func testResolve() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>.resolve(100)
+
+        promise.then({
+            XCTAssertEqual($0, 100)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testResolveWithPromise() {
+        let promise1 = Promise<Int>()
+        let promise2 = Promise<Int>.resolve(promise1)
+
+        XCTAssertTrue(promise1 === promise2)
+    }
+
+    func testRejectedPromise() {
+        let expectation = self.expectationWithDescription("done")
+
+        let error   = self.generateRandomError()
+        let promise = Promise<Int>.reject(error)
+
+        promise.caught({
+            XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: caught
 extension OnePromiseTests {
     func testFail() {
