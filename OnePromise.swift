@@ -305,6 +305,13 @@ extension Promise {
 
 // MARK: Collection
 extension Promise {
+    /**
+
+    Returns a promise which is fulfilled when all the promises in `promises` are fulfilled.
+    The returned promise's fulfillment value is array of `T`.
+    If any promise is rejected, the returned promise is rejected.
+
+    */
     class func all(promises: [Promise<T>]) -> Promise<[T]> {
         return all(dispatch_get_main_queue(), promises)
     }
