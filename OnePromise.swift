@@ -302,3 +302,42 @@ extension Promise {
         return finally(dispatch_get_main_queue(), callback)
     }
 }
+
+// MARK: Collection
+extension Promise {
+    class func all(promises: [Promise<T>]) -> Promise<[T]> {
+        return all(dispatch_get_main_queue(), promises)
+    }
+
+    class func all(dispatchQueue: dispatch_queue_t, _ promises: [Promise<T>]) -> Promise<[T]> {
+        let promise = Promise<[T]>()
+
+        var values: [T] = []
+
+        for subpromise in promises {
+            subpromise.then(dispatchQueue,
+                { (value) -> Void in
+                    performSync {
+                        if case .Pending = promise.state {
+                            values.append(value)
+
+                            if values.count == promises.count {
+                                promise.fulfill(values)
+                            }
+                        }
+                    }
+                },
+                { (error) -> Void in
+                    performSync {
+                        if case .Pending = promise.state {
+                            // Free up memory
+                            values.removeAll(keepCapacity: false)
+                            promise.reject(error)
+                        }
+                    }
+                })
+        }
+        
+        return promise
+    }
+}

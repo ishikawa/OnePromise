@@ -580,6 +580,73 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: Collection
+extension OnePromiseTests {
+
+    func testAllPromisesFulfilled() {
+        var promises: [Promise<Int>] = []
+
+        for i in 1...10 {
+            let subexpectation = self.expectationWithDescription("Promise \(i)")
+            let subpromise = Promise<Int>()
+
+            subpromise
+                .then({ (_) -> Void in
+                    subexpectation.fulfill()
+                })
+
+            promises.append(subpromise)
+        }
+
+        let expectation = self.expectationWithDescription("All done")
+
+        Promise.all(promises)
+            .then(kOnePromiseTestsQueue, { (_) -> Void in
+                XCTAssertTrue(self.isInTestDispatchQueue())
+                expectation.fulfill()
+            })
+            .caught({ (_) -> Void in
+                XCTFail()
+            })
+
+        for promise in promises {
+            promise.fulfill(1)
+        }
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    func testAnyPromisesRejected() {
+        var promises: [Promise<Int>] = []
+
+        for _ in 1...10 {
+            promises.append(Promise<Int>())
+        }
+
+        let expectation = self.expectationWithDescription("All done")
+
+        Promise.all(promises)
+            .then({ (_) -> Void in
+                XCTFail()
+            })
+            .caught(kOnePromiseTestsQueue, { (_) -> Void in
+                XCTAssertTrue(self.isInTestDispatchQueue())
+                expectation.fulfill()
+            })
+
+        let error = self.generateRandomError()
+        let rejectTarget = promises.popLast()!
+
+        for promise in promises {
+            promise.fulfill(2)
+        }
+
+        rejectTarget.reject(error)
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+}
+
 // MARK: Helpers
 extension OnePromiseTests {
     private func generateRandomError() -> NSError {
