@@ -2,28 +2,16 @@ import XCTest
 
 class PerformanceTests: XCTestCase {
 
-    func testScalability() {
+    func testFulfillPerformance() {
         let N = 10000
         let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0)
 
-        var promises: [Promise<Int>] = []
-
-        for _ in 0..<N {
-            promises.append(Promise())
-        }
-
-        self.measureBlock {
+        self.measureMetrics(XCTestCase.defaultPerformanceMetrics(), automaticallyStartMeasuring: false) {
             let semaphore = dispatch_semaphore_create(0);
-            promises.removeAll(keepCapacity: true)
+            var promises: [Promise<Int>] = []
 
             for _ in 0..<N {
                 promises.append(Promise<Int>())
-            }
-
-            for i in 0..<N {
-                dispatch_async(queue, { () -> Void in
-                    promises[i].fulfill(i)
-                })
             }
 
             Promise.all(queue, promises)
@@ -31,8 +19,16 @@ class PerformanceTests: XCTestCase {
                     dispatch_semaphore_signal(semaphore)
                 })
 
+            self.startMeasuring()
+
+            for i in 0..<N {
+                dispatch_async(queue, { () -> Void in
+                    promises[i].fulfill(i)
+                })
+            }
+
             dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+            self.stopMeasuring()
         }
     }
-
 }
