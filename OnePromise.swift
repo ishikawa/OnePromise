@@ -49,30 +49,10 @@ public class Promise<T> {
 
     private var rejectCallbacks: [(NSError) -> Void] = []
 
-    // For thread safety
-    private var syncQueue: dispatch_queue_t
-    private let syncQueueTag: UnsafePointer<Void>
+    /// Allow the execution of just one thread from many others.
+    private let mutex = dispatch_semaphore_create(1)
 
-    /**
-    Perform given `block` in serial queue. Reentrant, dead lock free.
-    */
-    private func performSync(block: () -> Void) {
-        if dispatch_get_specific(self.syncQueueTag) == nil {
-            dispatch_sync(syncQueue, block)
-        }
-        else {
-            block()
-        }
-    }
-    
     public init() {
-        self.syncQueue = dispatch_queue_create("jp.ko9.OnePromise.sync", DISPATCH_QUEUE_SERIAL)
-
-        self.syncQueueTag = withUnsafePointer(&syncQueue, {
-            unsafeBitCast($0, UnsafePointer<Void>.self)
-        })
-
-        dispatch_queue_set_specific(syncQueue, self.syncQueueTag, &syncQueue, nil)
     }
 
     public convenience init(block: Promise<T> -> Void) {
@@ -95,10 +75,12 @@ public class Promise<T> {
     public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         let nextPromise = Promise<U>()
 
-        performSync {
+        dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
+        do {
             self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
             self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
+        dispatch_semaphore_signal(self.mutex)
 
         return nextPromise
     }
@@ -106,10 +88,12 @@ public class Promise<T> {
     public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         let nextPromise = Promise<U>()
 
-        performSync {
+        dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
+        do {
             self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
             self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
+        dispatch_semaphore_signal(self.mutex)
 
         return nextPromise
     }
@@ -120,10 +104,12 @@ public class Promise<T> {
 
         let nextPromise = Promise<T>()
 
-        performSync {
+        dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
+        do {
             self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: { $0 })
             self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
+        dispatch_semaphore_signal(self.mutex)
 
         return nextPromise
     }
@@ -141,9 +127,7 @@ public class Promise<T> {
 
         switch self.state {
         case .Pending:
-            performSync {
-                self.fulfillCallbacks.append(onFulfilledAsync)
-            }
+            self.fulfillCallbacks.append(onFulfilledAsync)
         case .Fulfilled(let value):
             onFulfilledAsync(value)
         case .Rejected(_):
@@ -165,9 +149,7 @@ public class Promise<T> {
 
         switch self.state {
         case .Pending:
-            performSync {
-                self.fulfillCallbacks.append(onFulfilledAsync)
-            }
+            self.fulfillCallbacks.append(onFulfilledAsync)
         case .Fulfilled(let value):
             onFulfilledAsync(value)
         case .Rejected(_):
@@ -185,9 +167,7 @@ public class Promise<T> {
 
         switch self.state {
         case .Pending:
-            performSync {
-                self.rejectCallbacks.append(onRejectedAsync)
-            }
+            self.rejectCallbacks.append(onRejectedAsync)
         case .Fulfilled(_):
             return
         case .Rejected(let error):
@@ -196,7 +176,8 @@ public class Promise<T> {
     }
 
     public func fulfill(value: ValueType) {
-        performSync {
+        dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
+        do {
             if case .Pending = self.state {
                 self.state = .Fulfilled(value)
 
@@ -207,10 +188,12 @@ public class Promise<T> {
                 self.fulfillCallbacks.removeAll(keepCapacity: false)
             }
         }
+        dispatch_semaphore_signal(self.mutex)
     }
 
     public func reject(error: NSError) {
-        performSync {
+        dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
+        do {
             if case .Pending = self.state {
                 self.state = .Rejected(error)
 
@@ -221,6 +204,7 @@ public class Promise<T> {
                 self.rejectCallbacks.removeAll(keepCapacity: false)
             }
         }
+        dispatch_semaphore_signal(self.mutex)
     }
 }
 
@@ -318,29 +302,37 @@ extension Promise {
     class func all(dispatchQueue: dispatch_queue_t, _ promises: [Promise<T>]) -> Promise<[T]> {
         let promise = Promise<[T]>()
 
+        let lock = dispatch_semaphore_create(1)
+        var pending = true
         var values: [T] = []
 
         for subpromise in promises {
             subpromise.then(dispatchQueue,
                 { (value) -> Void in
-                    promise.performSync {
-                        if case .Pending = promise.state {
+                    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER)
+                    do {
+                        if pending {
                             values.append(value)
 
                             if values.count == promises.count {
                                 promise.fulfill(values)
+                                pending = false
                             }
                         }
                     }
+                    dispatch_semaphore_signal(lock)
                 },
                 { (error) -> Void in
-                    promise.performSync {
-                        if case .Pending = promise.state {
+                    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER)
+                    do {
+                        if pending {
                             // Free up memory
                             values.removeAll(keepCapacity: false)
                             promise.reject(error)
+                            pending = false
                         }
                     }
+                    dispatch_semaphore_signal(lock)
                 })
         }
         
