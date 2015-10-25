@@ -39,29 +39,6 @@ private enum PromiseState<T>: CustomStringConvertible {
     }
 }
 
-// For thread safety
-private var syncQueueTag = 0xfa9
-
-private let syncQueue: dispatch_queue_t = {
-    let q = dispatch_queue_create("jp.ko9.OnePromise.sync", DISPATCH_QUEUE_SERIAL)
-
-    dispatch_queue_set_specific(q, &syncQueueTag, &syncQueueTag, nil)
-
-    return q
-}()
-
-/**
-    Perform given `block` in serial queue. Reentrant, dead lock free.
-*/
-private func performSync(block: () -> Void) {
-    if dispatch_get_specific(&syncQueueTag) == nil {
-        dispatch_sync(syncQueue, block)
-    }
-    else {
-        block()
-    }
-}
-
 public class Promise<T> {
 
     public typealias ValueType = T
@@ -72,8 +49,30 @@ public class Promise<T> {
 
     private var rejectCallbacks: [(NSError) -> Void] = []
 
-    public init() {
+    // For thread safety
+    private var syncQueue: dispatch_queue_t
+    private let syncQueueTag: UnsafePointer<Void>
 
+    /**
+    Perform given `block` in serial queue. Reentrant, dead lock free.
+    */
+    private func performSync(block: () -> Void) {
+        if dispatch_get_specific(self.syncQueueTag) == nil {
+            dispatch_sync(syncQueue, block)
+        }
+        else {
+            block()
+        }
+    }
+    
+    public init() {
+        self.syncQueue = dispatch_queue_create("jp.ko9.OnePromise.sync", DISPATCH_QUEUE_SERIAL)
+
+        self.syncQueueTag = withUnsafePointer(&syncQueue, {
+            unsafeBitCast($0, UnsafePointer<Void>.self)
+        })
+
+        dispatch_queue_set_specific(syncQueue, self.syncQueueTag, &syncQueue, nil)
     }
 
     public convenience init(block: Promise<T> -> Void) {
@@ -324,7 +323,7 @@ extension Promise {
         for subpromise in promises {
             subpromise.then(dispatchQueue,
                 { (value) -> Void in
-                    performSync {
+                    promise.performSync {
                         if case .Pending = promise.state {
                             values.append(value)
 
@@ -335,7 +334,7 @@ extension Promise {
                     }
                 },
                 { (error) -> Void in
-                    performSync {
+                    promise.performSync {
                         if case .Pending = promise.state {
                             // Free up memory
                             values.removeAll(keepCapacity: false)
