@@ -288,7 +288,7 @@ extension Promise {
     }
 }
 
-// MARK: Collection
+// MARK: Promise.all
 extension Promise {
     /**
 
@@ -340,7 +340,10 @@ extension Promise {
         
         return promise
     }
+}
 
+// MARK: Promise.join
+extension Promise {
     /**
     Like `all`, but for multiple discrete promises. `Promise.join(...)` is easier and
     more performant (by reducing internal lock) to use fixed amount of discrete promises.
@@ -351,7 +354,7 @@ extension Promise {
             })
     */
     class func join<U>(
-          promise1: Promise<T>,
+        promise1: Promise<T>,
         _ promise2: Promise<U>)
         -> Promise<(T, U)>
     {
@@ -361,7 +364,7 @@ extension Promise {
     class func join<U>(dispatchQueue: dispatch_queue_t,
         _ promise1: Promise<T>,
         _ promise2: Promise<U>)
-            -> Promise<(T, U)>
+        -> Promise<(T, U)>
     {
         let joinPromise = Promise<(T, U)>()
 
