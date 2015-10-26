@@ -340,4 +340,40 @@ extension Promise {
         
         return promise
     }
+
+    /**
+    Like `all`, but for multiple discrete promises. `Promise.join(...)` is easier and
+    more performant (by reducing internal lock) to use fixed amount of discrete promises.
+
+        Promise.join(promise1, promise2)
+            .then({ (v1, v2) -> Void in
+                ...
+            })
+    */
+    class func join<U>(
+          promise1: Promise<T>,
+        _ promise2: Promise<U>)
+        -> Promise<(T, U)>
+    {
+        return Promise.join(dispatch_get_main_queue(), promise1, promise2)
+    }
+
+    class func join<U>(dispatchQueue: dispatch_queue_t,
+        _ promise1: Promise<T>,
+        _ promise2: Promise<U>)
+            -> Promise<(T, U)>
+    {
+        let joinPromise = Promise<(T, U)>()
+
+        promise1.then(dispatchQueue,
+            { (v1) -> Void in
+                promise2.then(dispatchQueue, { (v2) -> Void in
+                    joinPromise.fulfill((v1, v2))
+                })
+            }, joinPromise.reject)
+
+        promise2.caught(dispatchQueue, joinPromise.reject)
+
+        return joinPromise
+    }
 }

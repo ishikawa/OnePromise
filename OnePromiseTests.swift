@@ -9,7 +9,7 @@ private let kOnePromiseTestsQueue: dispatch_queue_t = {
     dispatch_queue_set_specific(q, &testQueueTag, &testQueueTag, nil)
 
     return q
-    }()
+}()
 
 class OnePromiseTests: XCTestCase {
 
@@ -583,6 +583,7 @@ extension OnePromiseTests {
 // MARK: Collection
 extension OnePromiseTests {
 
+    // Promise.all
     func testAllPromisesFulfilled() {
         var promises: [Promise<Int>] = []
 
@@ -642,6 +643,78 @@ extension OnePromiseTests {
         }
 
         rejectTarget.reject(error)
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    // Promise.join/2
+    func testJoinedTwoPromisesFulfilled() {
+        let intPromise = Promise<Int>()
+        let strPromise = Promise<String>()
+
+        let expectation1 = self.expectationWithDescription("Int Promise")
+        let expectation2 = self.expectationWithDescription("String Promise")
+
+        intPromise
+            .then({ (_) -> Void in
+                expectation1.fulfill()
+            })
+        strPromise
+            .then({ (_) -> Void in
+                expectation2.fulfill()
+            })
+
+        let expectation = self.expectationWithDescription("All done")
+
+        Promise.join(intPromise, strPromise)
+            .then(kOnePromiseTestsQueue, { (value1, value2) -> Void in
+                XCTAssertTrue(self.isInTestDispatchQueue())
+                XCTAssertEqual(value1, 1000)
+                XCTAssertEqual(value2, "string value")
+
+                expectation.fulfill()
+            })
+            .caught({ (error: NSError) -> Void in
+                XCTFail()
+            })
+
+        intPromise.fulfill(1000)
+        strPromise.fulfill("string value")
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    func testJoinedTwoPromisesRejected() {
+        let intPromise = Promise<Int>()
+        let strPromise = Promise<String>()
+
+        let expectation1 = self.expectationWithDescription("Int Promise")
+        let expectation2 = self.expectationWithDescription("String Promise")
+
+        intPromise
+            .then({ (_) -> Void in
+                expectation1.fulfill()
+            })
+        strPromise
+            .caught({ (e: NSError) -> Void in
+                expectation2.fulfill()
+            })
+
+        let error = self.generateRandomError()
+        let expectation = self.expectationWithDescription("All done")
+
+        Promise.join(intPromise, strPromise)
+            .then(kOnePromiseTestsQueue, { (value1, value2) -> Void in
+                XCTFail()
+            })
+            .caught(kOnePromiseTestsQueue, { (e: NSError) -> Void in
+                XCTAssertTrue(self.isInTestDispatchQueue())
+                XCTAssertEqual(e, error)
+                expectation.fulfill()
+            })
+
+        intPromise.fulfill(1000)
+        strPromise.reject(error)
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
     }
