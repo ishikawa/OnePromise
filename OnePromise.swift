@@ -186,6 +186,7 @@ public class Promise<T> {
                 }
 
                 self.fulfillCallbacks.removeAll(keepCapacity: false)
+                self.rejectCallbacks.removeAll(keepCapacity: false)
             }
         }
         dispatch_semaphore_signal(self.mutex)
@@ -201,6 +202,7 @@ public class Promise<T> {
                     cb(error)
                 }
 
+                self.fulfillCallbacks.removeAll(keepCapacity: false)
                 self.rejectCallbacks.removeAll(keepCapacity: false)
             }
         }
@@ -317,6 +319,7 @@ extension Promise {
                             if values.count == promises.count {
                                 promise.fulfill(values)
                                 pending = false
+                                values.removeAll(keepCapacity: false)
                             }
                         }
                     }
@@ -326,10 +329,9 @@ extension Promise {
                     dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER)
                     do {
                         if pending {
-                            // Free up memory
-                            values.removeAll(keepCapacity: false)
                             promise.reject(error)
                             pending = false
+                            values.removeAll(keepCapacity: false)
                         }
                     }
                     dispatch_semaphore_signal(lock)
