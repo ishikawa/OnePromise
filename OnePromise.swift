@@ -226,17 +226,17 @@ extension Promise {
     If `value` is a Promise, returns the promise.
     If `value` is not a Promise, returns a promise that is fulfilled with `value`.
     */
-    class func resolve<T>(value: Promise<T>) -> Promise<T> {
+    class func resolve(value: Promise<ValueType>) -> Promise<ValueType> {
         return value
     }
 
-    class func resolve<T>(value: T) -> Promise<T> {
-        return Promise<T> { $0.fulfill(value) }
+    class func resolve(value: ValueType) -> Promise<ValueType> {
+        return Promise<ValueType> { $0.fulfill(value) }
     }
 
     /// Create a promise that is rejected with given error.
-    class func reject(error: NSError) -> Promise<T> {
-        return Promise<T> { $0.reject(error) }
+    class func reject(error: NSError) -> Promise<ValueType> {
+        return Promise<ValueType> { $0.reject(error) }
     }
 }
 

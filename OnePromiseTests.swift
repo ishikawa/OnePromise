@@ -452,13 +452,19 @@ extension OnePromiseTests {
 // MARK: resolve and reject
 extension OnePromiseTests {
     func testResolve() {
-        let expectation = self.expectationWithDescription("done")
+        let expectation1 = self.expectationWithDescription("done")
+        let expectation2 = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>.resolve(100)
+        let promise1 = Promise<Int>.resolve(100)
+        let promise2 = Promise.resolve("string value")
 
-        promise.then({
+        promise1.then({
             XCTAssertEqual($0, 100)
-            expectation.fulfill()
+            expectation1.fulfill()
+        })
+        promise2.then({
+            XCTAssertEqual($0, "string value")
+            expectation2.fulfill()
         })
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
