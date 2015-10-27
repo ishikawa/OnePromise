@@ -2,6 +2,12 @@
 
 **IMPORTANT: Version 0.y.z is for initial develpment. Anything may change at any time. The public API should not be considered stable.**
 
+## 0.4.0
+
+- Performance improvement
+- `Promise.resolve(value)` and `Promise.reject(error)`
+- `Promise.all(values)` and `Promise.join(value1, value2)` to combine multiple promises
+
 ## 0.3.0
 
 - Error propagation from onFulfill callback

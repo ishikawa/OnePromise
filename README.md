@@ -33,7 +33,7 @@ pod "OnePromise"
 ```
 
 In order to use CocoaPods, you must explicity include `use_frameworks!` and specify
-`platform :ios` version to 8.0 at minimum.
+`platform :ios` version to 8.0 at minimum (though OnePromise works on iOS7).
 
 Read [CocoaPods blog entry](http://blog.cocoapods.org/CocoaPods-0.36/) for
 more details.
