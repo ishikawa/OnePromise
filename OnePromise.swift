@@ -186,6 +186,7 @@ public class Promise<T> {
                 }
 
                 self.fulfillCallbacks.removeAll(keepCapacity: false)
+                self.rejectCallbacks.removeAll(keepCapacity: false)
             }
         }
         dispatch_semaphore_signal(self.mutex)
@@ -201,6 +202,7 @@ public class Promise<T> {
                     cb(error)
                 }
 
+                self.fulfillCallbacks.removeAll(keepCapacity: false)
                 self.rejectCallbacks.removeAll(keepCapacity: false)
             }
         }
@@ -286,7 +288,7 @@ extension Promise {
     }
 }
 
-// MARK: Collection
+// MARK: Promise.all
 extension Promise {
     /**
 
@@ -317,6 +319,7 @@ extension Promise {
                             if values.count == promises.count {
                                 promise.fulfill(values)
                                 pending = false
+                                values.removeAll(keepCapacity: false)
                             }
                         }
                     }
@@ -326,10 +329,9 @@ extension Promise {
                     dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER)
                     do {
                         if pending {
-                            // Free up memory
-                            values.removeAll(keepCapacity: false)
                             promise.reject(error)
                             pending = false
+                            values.removeAll(keepCapacity: false)
                         }
                     }
                     dispatch_semaphore_signal(lock)
@@ -337,5 +339,76 @@ extension Promise {
         }
         
         return promise
+    }
+}
+
+// MARK: Promise.join
+extension Promise {
+    /**
+    Like `all`, but for multiple discrete promises. `Promise.join(...)` is easier and
+    more performant (by reducing internal lock) to use fixed amount of discrete promises.
+
+        Promise.join(promise1, promise2)
+            .then({ (v1, v2) -> Void in
+                ...
+            })
+    */
+    class func join<U1>(
+        promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>)
+        -> Promise<(ValueType, U1)>
+    {
+        return Promise.join(dispatch_get_main_queue(), promise1, promise2)
+    }
+
+    class func join<U1>(dispatchQueue: dispatch_queue_t,
+        _ promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>)
+        -> Promise<(ValueType, U1)>
+    {
+        let joinPromise = Promise<(ValueType, U1)>()
+
+        promise1.then(dispatchQueue,
+            { (v1) -> Void in
+                promise2.then(dispatchQueue, { (v2) -> Void in
+                    joinPromise.fulfill((v1, v2))
+                })
+            }, joinPromise.reject)
+
+        promise2.caught(dispatchQueue, joinPromise.reject)
+
+        return joinPromise
+    }
+
+    class func join<U1, U2>(
+        promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>,
+        _ promise3: Promise<U2>)
+        -> Promise<(ValueType, U1, U2)>
+    {
+        return Promise.join(dispatch_get_main_queue(), promise1, promise2, promise3)
+    }
+
+    class func join<U1, U2>(dispatchQueue: dispatch_queue_t,
+        _ promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>,
+        _ promise3: Promise<U2>)
+        -> Promise<(ValueType, U1, U2)>
+    {
+        let joinPromise = Promise<(ValueType, U1, U2)>()
+
+        promise1.then(dispatchQueue,
+            { (v1) -> Void in
+                promise2.then(dispatchQueue, { (v2) -> Void in
+                    promise3.then(dispatchQueue, { (v3) -> Void in
+                        joinPromise.fulfill((v1, v2, v3))
+                    })
+                })
+            }, joinPromise.reject)
+
+        promise2.caught(dispatchQueue, joinPromise.reject)
+        promise3.caught(dispatchQueue, joinPromise.reject)
+
+        return joinPromise
     }
 }
