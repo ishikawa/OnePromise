@@ -353,20 +353,20 @@ extension Promise {
                 ...
             })
     */
-    class func join<U>(
-        promise1: Promise<T>,
-        _ promise2: Promise<U>)
-        -> Promise<(T, U)>
+    class func join<U1>(
+        promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>)
+        -> Promise<(ValueType, U1)>
     {
         return Promise.join(dispatch_get_main_queue(), promise1, promise2)
     }
 
-    class func join<U>(dispatchQueue: dispatch_queue_t,
-        _ promise1: Promise<T>,
-        _ promise2: Promise<U>)
-        -> Promise<(T, U)>
+    class func join<U1>(dispatchQueue: dispatch_queue_t,
+        _ promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>)
+        -> Promise<(ValueType, U1)>
     {
-        let joinPromise = Promise<(T, U)>()
+        let joinPromise = Promise<(ValueType, U1)>()
 
         promise1.then(dispatchQueue,
             { (v1) -> Void in
@@ -376,6 +376,38 @@ extension Promise {
             }, joinPromise.reject)
 
         promise2.caught(dispatchQueue, joinPromise.reject)
+
+        return joinPromise
+    }
+
+    class func join<U1, U2>(
+        promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>,
+        _ promise3: Promise<U2>)
+        -> Promise<(ValueType, U1, U2)>
+    {
+        return Promise.join(dispatch_get_main_queue(), promise1, promise2, promise3)
+    }
+
+    class func join<U1, U2>(dispatchQueue: dispatch_queue_t,
+        _ promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>,
+        _ promise3: Promise<U2>)
+        -> Promise<(ValueType, U1, U2)>
+    {
+        let joinPromise = Promise<(ValueType, U1, U2)>()
+
+        promise1.then(dispatchQueue,
+            { (v1) -> Void in
+                promise2.then(dispatchQueue, { (v2) -> Void in
+                    promise3.then(dispatchQueue, { (v3) -> Void in
+                        joinPromise.fulfill((v1, v2, v3))
+                    })
+                })
+            }, joinPromise.reject)
+
+        promise2.caught(dispatchQueue, joinPromise.reject)
+        promise3.caught(dispatchQueue, joinPromise.reject)
 
         return joinPromise
     }

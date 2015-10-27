@@ -580,10 +580,8 @@ extension OnePromiseTests {
     }
 }
 
-// MARK: Collection
+// MARK: Promise.all
 extension OnePromiseTests {
-
-    // Promise.all
     func testAllPromisesFulfilled() {
         var promises: [Promise<Int>] = []
 
@@ -646,7 +644,10 @@ extension OnePromiseTests {
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
     }
+}
 
+// MARK: Promise.join
+extension OnePromiseTests {
     // Promise.join/2
     func testJoinedTwoPromisesFulfilled() {
         let intPromise = Promise<Int>()
@@ -714,6 +715,95 @@ extension OnePromiseTests {
             })
 
         intPromise.fulfill(1000)
+        strPromise.reject(error)
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    // Promise.join/3
+    func testJoinedThreePromisesFulfilled() {
+        let intPromise    = Promise<Int>()
+        let strPromise    = Promise<String>()
+        let doublePromise = Promise<Double>()
+
+        let expectation1 = self.expectationWithDescription("Int Promise")
+        let expectation2 = self.expectationWithDescription("String Promise")
+        let expectation3 = self.expectationWithDescription("String Promise")
+
+        intPromise
+            .then({ (_) -> Void in
+                expectation1.fulfill()
+            })
+        strPromise
+            .then({ (_) -> Void in
+                expectation2.fulfill()
+            })
+        doublePromise
+            .then({ (_) -> Void in
+                expectation3.fulfill()
+            })
+
+        let expectation = self.expectationWithDescription("All done")
+
+        Promise.join(intPromise, strPromise, doublePromise)
+            .then(kOnePromiseTestsQueue, { (value1, value2, value3) -> Void in
+                XCTAssertTrue(self.isInTestDispatchQueue())
+                XCTAssertEqual(value1, 1000)
+                XCTAssertEqual(value2, "string value")
+                XCTAssertEqualWithAccuracy(value3, 2000.0, accuracy: 0.01)
+
+                expectation.fulfill()
+            })
+            .caught({ (error: NSError) -> Void in
+                XCTFail()
+            })
+
+        intPromise.fulfill(1000)
+        strPromise.fulfill("string value")
+        doublePromise.fulfill(2000.0)
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    func testJoinedThreePromisesRejected() {
+        let error = self.generateRandomError()
+
+        let intPromise    = Promise<Int>()
+        let strPromise    = Promise<String>()
+        let doublePromise = Promise<Double>()
+
+        let expectation1 = self.expectationWithDescription("Int Promise")
+        let expectation2 = self.expectationWithDescription("String Promise")
+        let expectation3 = self.expectationWithDescription("String Promise")
+
+        intPromise
+            .then({ (_) -> Void in
+                expectation1.fulfill()
+            })
+        strPromise
+            .caught({ (e) -> Void in
+                XCTAssertEqual(e, error)
+                expectation2.fulfill()
+            })
+        doublePromise
+            .then({ (_) -> Void in
+                expectation3.fulfill()
+            })
+
+        let expectation = self.expectationWithDescription("All done")
+
+        Promise.join(intPromise, strPromise, doublePromise)
+            .then(kOnePromiseTestsQueue, { (_, _, _) -> Void in
+                XCTFail()
+            })
+            .caught(kOnePromiseTestsQueue, { (e: NSError) -> Void in
+                XCTAssertTrue(self.isInTestDispatchQueue())
+                XCTAssertEqual(e, error)
+                expectation.fulfill()
+            })
+
+        intPromise.fulfill(1000)
+        doublePromise.fulfill(2000.0)
         strPromise.reject(error)
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
