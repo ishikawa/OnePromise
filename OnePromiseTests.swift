@@ -49,6 +49,43 @@ class OnePromiseTests: XCTestCase {
     }
 }
 
+// MARK: Swift type inference
+extension OnePromiseTests {
+    func testTypeInference1() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise1 = Promise<Int>()
+        let promise2 = Promise<Int>()
+
+        var i = 0
+
+        promise1.then({ (_) in XCTAssertEqual(i++, 0) })
+        promise2.then({ (_) in XCTAssertEqual(i++, 1) })
+
+        // Because `then A` returns the Promise, the handler in `then B` must be
+        // invoked after `then A` promise fulfilled.
+        let _: Promise<Void> = promise1
+            // then A
+            .then({
+                (_) in  // should be: (_) -> Promise<Int> in
+
+                return promise2
+            })
+            // then B
+            .then({ (_) -> Void in
+                XCTAssertEqual(i++, 2)
+                expectation.fulfill()
+            })
+
+        promise1.fulfill(1)
+        dispatch_async(dispatch_get_main_queue()) { () -> Void in
+            promise2.fulfill(2)
+        }
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: Dispatch Queue
 extension OnePromiseTests {
     func testDispatchQueue() {
@@ -230,7 +267,7 @@ extension OnePromiseTests {
         let promise = Promise<Int>()
 
         promise
-            .then(nil, { (e: NSError) in
+            .caught({ (e: NSError) in
                 XCTFail()
             })
             .then({ (value) in
@@ -264,23 +301,23 @@ extension OnePromiseTests {
         let promise = Promise<Int>()
 
         promise
-            .then(serialQueue, nil, { (e: NSError) -> Void in
+            .caught(serialQueue, { (e: NSError) -> Void in
                 XCTAssertEqual(i, 0)
                 expectations[i++].fulfill()
             })
-            .then(serialQueue, nil, { (e: NSError) -> Void in
+            .caught(serialQueue, { (e: NSError) -> Void in
                 XCTAssertEqual(i, 3)
                 expectations[i++].fulfill()
             })
 
-        promise.then(serialQueue, nil, { (e: NSError) -> Void in
+        promise.caught(serialQueue, { (e: NSError) -> Void in
             XCTAssertEqual(i, 1)
             expectations[i++].fulfill()
         })
 
         promise.reject(error)
 
-        promise.then(serialQueue, nil, { (e: NSError) -> Void in
+        promise.caught(serialQueue, { (e: NSError) -> Void in
             XCTAssertEqual(i, 2)
             expectations[i++].fulfill()
         })
@@ -296,7 +333,7 @@ extension OnePromiseTests {
         promise.fulfill(1)
 
         promise
-            .then(nil, { (e: NSError) -> Void in
+            .caught({ (e: NSError) -> Void in
                 XCTFail()
             })
 
@@ -317,7 +354,7 @@ extension OnePromiseTests {
             .then({ (value) in
 
             })
-            .then(nil, { (e: NSError) in
+            .caught({ (e: NSError) in
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
@@ -342,7 +379,7 @@ extension OnePromiseTests {
             .then({ (i) throws -> Void in
                 throw SomeError.IntError(i)
             })
-            .then(nil, { (e: NSError) in
+            .caught({ (e: NSError) in
                 XCTAssertTrue(e.domain.hasSuffix(".OnePromiseTests.SomeError"))
                 expectation.fulfill()
             })
@@ -361,7 +398,7 @@ extension OnePromiseTests {
             .then({ (i) throws -> Void in
                 throw error
             })
-            .then(nil, { (e: NSError) in
+            .caught({ (e: NSError) in
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
@@ -380,7 +417,7 @@ extension OnePromiseTests {
             .then({ (i) throws -> Promise<Int> in
                 throw error
             })
-            .then(nil, { (e: NSError) in
+            .caught({ (e: NSError) in
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
@@ -403,7 +440,7 @@ extension OnePromiseTests {
                     promise.reject(error)
                 }
             })
-            .then(nil, { (e: NSError) in
+            .caught({ (e: NSError) in
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
