@@ -68,10 +68,6 @@ public class Promise<T> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
-    public func then(onFulfilled: (ValueType throws -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
-        return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
-    }
-
     public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         let nextPromise = Promise<U>()
 
@@ -91,22 +87,6 @@ public class Promise<T> {
         dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
         do {
             self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
-            self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
-        }
-        dispatch_semaphore_signal(self.mutex)
-
-        return nextPromise
-    }
-
-    public func then(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType throws -> T)?, _ onRejected: (NSError -> Void)? = nil) -> Promise<T> {
-        // If onFulfilled is not nil, the compiler should choose generic function.
-        assert( onFulfilled == nil )
-
-        let nextPromise = Promise<T>()
-
-        dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
-        do {
-            self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: { $0 })
             self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
         dispatch_semaphore_signal(self.mutex)
@@ -244,7 +224,7 @@ extension Promise {
 extension Promise {
     /// `caught` is sugar, equivalent to `promise.then(nil, onRejected)`.
     public func caught(dispatchQueue: dispatch_queue_t, _ onRejected: (NSError) -> Void) -> Promise<ValueType> {
-        return self.then(dispatchQueue, nil, onRejected)
+        return self.then(dispatchQueue, { $0 }, onRejected)
     }
 
     /**
