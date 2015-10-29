@@ -71,6 +71,39 @@ public class Promise<T> {
         block(self)
     }
 
+    /**
+
+    Create a new promise. The `block` will receive functions fulfill and reject as its arguments
+    which can be called to fulfill or reject the created promise.
+
+    */
+    public convenience init(_ block: (ValueType -> Void, NSError -> Void) -> Void) {
+        self.init()
+        block(self.doFulfill, self.doReject)
+    }
+
+    /**
+
+    Creates a new promise instance, and return it and fulfill, reject function.
+
+    You can use `deferred` method to create a new promise, and determine when this promise should be
+    fulfilled or rejected.
+
+    */
+    public class func deferred() -> (Promise<T>, ValueType -> Void, NSError -> Void) {
+        var fulfill: (ValueType -> Void)?
+        var reject: (NSError -> Void)?
+
+        let promise = Promise<T>({
+            (fulfill_, reject_) -> Void in
+
+            fulfill = fulfill_
+            reject  = reject_
+        })
+
+        return (promise, fulfill!, reject!)
+    }
+
     public func then<U>(onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
@@ -168,6 +201,15 @@ public class Promise<T> {
 
     @available(*, deprecated, message="It will be dropped from a future version. Use initialization block or Promise.deferred instead")
     public func fulfill(value: ValueType) {
+        return self.doFulfill(value)
+    }
+
+    @available(*, deprecated, message="It will be dropped from a future version. Use initialization block or Promise.deferred instead")
+    public func reject(error: NSError) {
+        return self.doReject(error)
+    }
+
+    private func doFulfill(value: ValueType) {
         dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
         do {
             if case .Pending = self.state {
@@ -184,8 +226,7 @@ public class Promise<T> {
         dispatch_semaphore_signal(self.mutex)
     }
 
-    @available(*, deprecated, message="It will be dropped from a future version. Use initialization block or Promise.deferred instead")
-    public func reject(error: NSError) {
+    private func doReject(error: NSError) {
         dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
         do {
             if case .Pending = self.state {
