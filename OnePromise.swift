@@ -61,9 +61,11 @@ public class Promise<T> {
     /// Allow the execution of just one thread from many others.
     private let mutex = dispatch_semaphore_create(1)
 
+    @available(*, deprecated, message="It will be dropped from a future version.")
     public init() {
     }
 
+    @available(*, deprecated, message="It will be dropped from a future version.")
     public convenience init(block: Promise<T> -> Void) {
         self.init()
         block(self)
@@ -164,6 +166,7 @@ public class Promise<T> {
         }
     }
 
+    @available(*, deprecated, message="It will be dropped from a future version. Use initialization block or Promise.deferred instead")
     public func fulfill(value: ValueType) {
         dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
         do {
@@ -181,6 +184,7 @@ public class Promise<T> {
         dispatch_semaphore_signal(self.mutex)
     }
 
+    @available(*, deprecated, message="It will be dropped from a future version. Use initialization block or Promise.deferred instead")
     public func reject(error: NSError) {
         dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
         do {
