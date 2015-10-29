@@ -113,11 +113,11 @@ public class Promise<T> {
     }
 
     public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
-        let nextPromise = Promise<U>()
+        let (nextPromise, nextFulfill, nextReject) = Promise<U>.deferred()
 
         dispatch_semaphore_wait(self.mutex, DISPATCH_TIME_FOREVER)
         do {
-            self.append(dispatchQueue, nextPromise: nextPromise, onFulfilled: onFulfilled)
+            self.appendP(dispatchQueue, onFulfilled: onFulfilled, nextFulfill: nextFulfill, nextReject: nextReject)
             self.append(dispatchQueue, nextPromise: nextPromise, onRejected: onRejected)
         }
         dispatch_semaphore_signal(self.mutex)
@@ -138,13 +138,17 @@ public class Promise<T> {
         return nextPromise
     }
 
-    private func append<U>(dispatchQueue: dispatch_queue_t, nextPromise: Promise<U>, onFulfilled: ValueType throws -> Promise<U>) {
+    private func appendP<U>(dispatchQueue: dispatch_queue_t,
+        onFulfilled: ValueType throws -> Promise<U>,
+        nextFulfill: U -> Void,
+        nextReject: NSError -> Void)
+    {
         let onFulfilledAsync = { (value: ValueType) -> Void in
             dispatch_async(dispatchQueue, {
                 do {
-                    try onFulfilled(value).then(dispatchQueue, nextPromise.fulfill, nextPromise.reject)
+                    try onFulfilled(value).then(dispatchQueue, nextFulfill, nextReject)
                 } catch let error as NSError {
-                    nextPromise.reject(error)
+                    nextReject(error)
                 }
             })
         }
