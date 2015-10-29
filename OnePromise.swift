@@ -89,19 +89,30 @@ public class Promise<T> {
     You can use `deferred` method to create a new promise, and determine when this promise should be
     fulfilled or rejected.
 
+        let (promise, fulfill, reject) = Promise<Int>.deferred()
+
+        dispatch_async(dispatch_get_main_queue()) {
+            fulfill(199)
+        }
+
+    `Promise.deferred()` names the individual elements in a tuple it return.
+
+        let deferred = Promise<Int>.deferred()
+
+        dispatch_async(dispatch_get_main_queue()) {
+            deferred.fulfill(199)
+        }
     */
-    public class func deferred() -> (Promise<T>, ValueType -> Void, NSError -> Void) {
-        var fulfill: (ValueType -> Void)?
-        var reject: (NSError -> Void)?
+    public class func deferred() -> (promise: Promise<T>, fulfill: ValueType -> Void, reject: NSError -> Void) {
+        var fulfill: (ValueType -> Void)!
+        var reject: (NSError -> Void)!
 
-        let promise = Promise<T>({
-            (fulfill_, reject_) -> Void in
+        let promise = Promise<T> {
+            fulfill = $0
+            reject  = $1
+        }
 
-            fulfill = fulfill_
-            reject  = reject_
-        })
-
-        return (promise, fulfill!, reject!)
+        return (promise: promise, fulfill: fulfill, reject: reject)
     }
 
     public func then<U>(onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
@@ -392,18 +403,18 @@ extension Promise {
         _ promise2: Promise<U1>)
         -> Promise<(ValueType, U1)>
     {
-        let (joinPromise, joinFulfill, joinReject) = Promise<(ValueType, U1)>.deferred()
+        let deferred = Promise<(ValueType, U1)>.deferred()
 
         promise1.then(dispatchQueue,
             { (v1) -> Void in
                 promise2.then(dispatchQueue, { (v2) -> Void in
-                    joinFulfill((v1, v2))
+                    deferred.fulfill((v1, v2))
                 })
-            }, joinReject)
+            }, deferred.reject)
 
-        promise2.caught(dispatchQueue, joinReject)
+        promise2.caught(dispatchQueue, deferred.reject)
 
-        return joinPromise
+        return deferred.promise
     }
 
     class func join<U1, U2>(
@@ -421,20 +432,20 @@ extension Promise {
         _ promise3: Promise<U2>)
         -> Promise<(ValueType, U1, U2)>
     {
-        let (joinPromise, joinFulfill, joinReject) = Promise<(ValueType, U1, U2)>.deferred()
+        let deferred = Promise<(ValueType, U1, U2)>.deferred()
 
         promise1.then(dispatchQueue,
             { (v1) -> Void in
                 promise2.then(dispatchQueue, { (v2) -> Void in
                     promise3.then(dispatchQueue, { (v3) -> Void in
-                        joinFulfill((v1, v2, v3))
+                        deferred.fulfill((v1, v2, v3))
                     })
                 })
-            }, joinReject)
+            }, deferred.reject)
 
-        promise2.caught(dispatchQueue, joinReject)
-        promise3.caught(dispatchQueue, joinReject)
+        promise2.caught(dispatchQueue, deferred.reject)
+        promise3.caught(dispatchQueue, deferred.reject)
 
-        return joinPromise
+        return deferred.promise
     }
 }

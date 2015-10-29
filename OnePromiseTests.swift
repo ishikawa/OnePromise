@@ -86,6 +86,44 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: Deferred
+extension OnePromiseTests {
+    func testDeferredFulfill() {
+        let expectation = self.expectationWithDescription("done")
+
+        let deferred = Promise<Int>.deferred()
+
+        deferred.promise
+            .then({
+                XCTAssertEqual($0, 199)
+                expectation.fulfill()
+            })
+
+        dispatch_async(dispatch_get_main_queue()) {
+            deferred.fulfill(199)
+        }
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testDeferredReject() {
+        let expectation = self.expectationWithDescription("done")
+
+        let (promise, _, reject) = Promise<Int>.deferred()
+
+        promise
+            .caught({ (_) in
+                expectation.fulfill()
+            })
+
+        dispatch_async(dispatch_get_main_queue()) {
+            reject(self.generateRandomError())
+        }
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: Dispatch Queue
 extension OnePromiseTests {
     func testDispatchQueue() {
