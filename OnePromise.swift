@@ -39,6 +39,15 @@ private enum PromiseState<T>: CustomStringConvertible {
     }
 }
 
+/**
+
+From [Promises/A+](https://promisesaplus.com) specification:
+
+>A _promise_ represents the eventual result of an asynchronous operation. The primary way of
+interacting with a promise is through its `then` method, which registers callbacks to receive either
+a promise's value or the reason why promise cannot be fulfilled.
+
+*/
 public class Promise<T> {
 
     public typealias ValueType = T
