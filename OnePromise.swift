@@ -62,7 +62,8 @@ public class Promise<T> {
     private let mutex = dispatch_semaphore_create(1)
 
     @available(*, deprecated, message="It will be dropped from a future version.")
-    public init() {
+    public convenience init() {
+        self.init({ (_, _) in })
     }
 
     @available(*, deprecated, message="It will be dropped from a future version.")
@@ -77,8 +78,7 @@ public class Promise<T> {
     which can be called to fulfill or reject the created promise.
 
     */
-    public convenience init(_ block: (ValueType -> Void, NSError -> Void) -> Void) {
-        self.init()
+    public init(_ block: (ValueType -> Void, NSError -> Void) -> Void) {
         block(self.doFulfill, self.doReject)
     }
 
