@@ -388,16 +388,16 @@ extension Promise {
         _ promise2: Promise<U1>)
         -> Promise<(ValueType, U1)>
     {
-        let joinPromise = Promise<(ValueType, U1)>()
+        let (joinPromise, joinFulfill, joinReject) = Promise<(ValueType, U1)>.deferred()
 
         promise1.then(dispatchQueue,
             { (v1) -> Void in
                 promise2.then(dispatchQueue, { (v2) -> Void in
-                    joinPromise.fulfill((v1, v2))
+                    joinFulfill((v1, v2))
                 })
-            }, joinPromise.reject)
+            }, joinReject)
 
-        promise2.caught(dispatchQueue, joinPromise.reject)
+        promise2.caught(dispatchQueue, joinReject)
 
         return joinPromise
     }
@@ -417,19 +417,19 @@ extension Promise {
         _ promise3: Promise<U2>)
         -> Promise<(ValueType, U1, U2)>
     {
-        let joinPromise = Promise<(ValueType, U1, U2)>()
+        let (joinPromise, joinFulfill, joinReject) = Promise<(ValueType, U1, U2)>.deferred()
 
         promise1.then(dispatchQueue,
             { (v1) -> Void in
                 promise2.then(dispatchQueue, { (v2) -> Void in
                     promise3.then(dispatchQueue, { (v3) -> Void in
-                        joinPromise.fulfill((v1, v2, v3))
+                        joinFulfill((v1, v2, v3))
                     })
                 })
-            }, joinPromise.reject)
+            }, joinReject)
 
-        promise2.caught(dispatchQueue, joinPromise.reject)
-        promise3.caught(dispatchQueue, joinPromise.reject)
+        promise2.caught(dispatchQueue, joinReject)
+        promise3.caught(dispatchQueue, joinReject)
 
         return joinPromise
     }
