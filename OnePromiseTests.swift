@@ -9,16 +9,16 @@ private let kOnePromiseTestsQueue: dispatch_queue_t = {
     dispatch_queue_set_specific(q, &testQueueTag, &testQueueTag, nil)
 
     return q
-}()
+    }()
 
 class OnePromiseTests: XCTestCase {
 
     func testCreateWithBlock() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise: Promise<Int> = Promise { (promise) in
+        let promise: Promise<Int> = Promise { (fulfill, _) in
             dispatch_async(dispatch_get_main_queue()) {
-                promise.fulfill(1)
+                fulfill(1)
             }
         }
 
@@ -33,9 +33,9 @@ class OnePromiseTests: XCTestCase {
     func testPromiseCallbackReturnsSameTypeAsValueType() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (value:Int) -> Int in
                 return value * 2
             })
@@ -44,7 +44,7 @@ class OnePromiseTests: XCTestCase {
                 expectation.fulfill()
             })
 
-        promise.fulfill(1000)
+        deferred.fulfill(1000)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
@@ -54,8 +54,11 @@ extension OnePromiseTests {
     func testTypeInference1() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise1 = Promise<Int>()
-        let promise2 = Promise<Int>()
+        let deferred1 = Promise<Int>.deferred()
+        let deferred2 = Promise<Int>.deferred()
+
+        let promise1 = deferred1.promise
+        let promise2 = deferred2.promise
 
         var i = 0
 
@@ -77,9 +80,9 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise1.fulfill(1)
+        deferred1.fulfill(1)
         dispatch_async(dispatch_get_main_queue()) { () -> Void in
-            promise2.fulfill(2)
+            deferred2.fulfill(2)
         }
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
@@ -129,9 +132,9 @@ extension OnePromiseTests {
     func testDispatchQueue() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (i) -> Int in
                 XCTAssertFalse(self.isInTestDispatchQueue())
                 return i * 2
@@ -140,11 +143,9 @@ extension OnePromiseTests {
                 XCTAssertTrue(self.isInTestDispatchQueue())
                 XCTAssertEqual(i, 2000)
 
-                let np = Promise<String>()
-
-                np.fulfill("\(i)")
-
-                return np
+                return Promise<String> { (fulfill, _) in
+                    fulfill("\(i)")
+                }
             })
             .then(kOnePromiseTestsQueue, { (s) in
                 XCTAssertTrue(self.isInTestDispatchQueue())
@@ -153,7 +154,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.fulfill(1000)
+        deferred.fulfill(1000)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
@@ -163,13 +164,13 @@ extension OnePromiseTests {
     func testChildPromiseOfPendingPromise() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (i) in
-                Promise<Double> { (p) in
+                Promise<Double> { (fulfill, _) in
                     dispatch_async(dispatch_get_main_queue()) {
-                        p.fulfill(Double(i))
+                        fulfill(Double(i))
                     }
                 }
             })
@@ -179,7 +180,7 @@ extension OnePromiseTests {
             })
 
         dispatch_async(dispatch_get_main_queue()) {
-            promise.fulfill(2)
+            deferred.fulfill(2)
         }
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
@@ -188,24 +189,24 @@ extension OnePromiseTests {
     func testChildPromiseOfPendingPromiseToBeRejected() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (i) in
-                Promise<Double> { (p) in
+                Promise<Double> { (fulfill, _) in
                     dispatch_async(dispatch_get_main_queue()) {
-                        p.fulfill(Double(i))
+                        fulfill(Double(i))
                     }
                 }
             })
             .then({ (d) -> Void in
                 XCTFail()
-            }, { (e: NSError) in
-                expectation.fulfill()
+                }, { (e: NSError) in
+                    expectation.fulfill()
             })
 
         dispatch_async(dispatch_get_main_queue()) {
-            promise.reject(self.generateRandomError())
+            deferred.reject(self.generateRandomError())
         }
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
@@ -214,14 +215,14 @@ extension OnePromiseTests {
     func testChildPromiseOfFulfilledPromise() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.fulfill(2)
+        deferred.fulfill(2)
 
-        promise
+        deferred.promise
             .then({ (i) in
-                Promise<Double> { (p) in
-                    p.fulfill(Double(i))
+                Promise<Double> { (fulfill, _) in
+                    fulfill(Double(i))
                 }
             })
             .then({ (d) -> Void in
@@ -249,7 +250,8 @@ extension OnePromiseTests {
         expectations.append(self.expectationWithDescription("4"))
 
         // Promise and callback registration
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
+        let promise  = deferred.promise
 
         promise
             .then(serialQueue, { (value) -> Void in
@@ -266,7 +268,7 @@ extension OnePromiseTests {
             expectations[i++].fulfill()
         })
 
-        promise.fulfill(1000)
+        deferred.fulfill(1000)
 
         promise.then(serialQueue, { (value) -> Void in
             XCTAssertEqual(i, 2)
@@ -279,14 +281,15 @@ extension OnePromiseTests {
     func testOnFulfilledNeverCalledIfAlreadyRejected() {
         let expectation = self.expectationWithDescription("wait")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
+        let promise  = deferred.promise
 
-        promise.reject(self.generateRandomError())
+        deferred.reject(self.generateRandomError())
 
         promise
             .then({ (value) -> Promise<Int> in
                 XCTFail()
-                return Promise<Int>()
+                return Promise<Int>() { (_, _) in }
             })
             .then({ (value) in
                 XCTFail()
@@ -302,9 +305,9 @@ extension OnePromiseTests {
     func testPropagateFulfillToChildPromises() {
         let expectation = self.expectationWithDescription("wait")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .caught({ (e: NSError) in
                 XCTFail()
             })
@@ -313,7 +316,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.fulfill(123)
+        deferred.fulfill(123)
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
@@ -335,8 +338,9 @@ extension OnePromiseTests {
         expectations.append(self.expectationWithDescription("4"))
 
         // Promise and callback registration
-        let error   = self.generateRandomError()
-        let promise = Promise<Int>()
+        let error = self.generateRandomError()
+        let deferred = Promise<Int>.deferred()
+        let promise  = deferred.promise
 
         promise
             .caught(serialQueue, { (e: NSError) -> Void in
@@ -353,7 +357,7 @@ extension OnePromiseTests {
             expectations[i++].fulfill()
         })
 
-        promise.reject(error)
+        deferred.reject(error)
 
         promise.caught(serialQueue, { (e: NSError) -> Void in
             XCTAssertEqual(i, 2)
@@ -366,11 +370,11 @@ extension OnePromiseTests {
     func testOnRejectedNeverCalledIfAlreadyFulfilled() {
         let expectation = self.expectationWithDescription("wait")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.fulfill(1)
+        deferred.fulfill(1)
 
-        promise
+        deferred.promise
             .caught({ (e: NSError) -> Void in
                 XCTFail()
             })
@@ -378,17 +382,17 @@ extension OnePromiseTests {
         dispatch_async(dispatch_get_main_queue()) {
             expectation.fulfill()
         }
-        
+
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
     func testPropagateRejectionToChildPromises() {
         let expectation = self.expectationWithDescription("wait")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
         let error   = self.generateRandomError()
 
-        promise
+        deferred.promise
             .then({ (value) in
 
             })
@@ -397,7 +401,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.reject(error)
+        deferred.reject(error)
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
@@ -411,9 +415,9 @@ extension OnePromiseTests {
 
     func testPropagateSwiftErrorType() {
         let expectation = self.expectationWithDescription("wait")
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (i) throws -> Void in
                 throw SomeError.IntError(i)
             })
@@ -422,7 +426,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.fulfill(1)
+        deferred.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
@@ -430,9 +434,9 @@ extension OnePromiseTests {
         let expectation = self.expectationWithDescription("wait")
 
         let error   = self.generateRandomError()
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (i) throws -> Void in
                 throw error
             })
@@ -441,7 +445,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.fulfill(1)
+        deferred.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
@@ -449,9 +453,9 @@ extension OnePromiseTests {
         let expectation = self.expectationWithDescription("wait")
 
         let error   = self.generateRandomError()
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (i) throws -> Promise<Int> in
                 throw error
             })
@@ -460,7 +464,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.fulfill(1)
+        deferred.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
@@ -470,12 +474,12 @@ extension OnePromiseTests {
         let expectation = self.expectationWithDescription("wait")
 
         let error   = self.generateRandomError()
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (i) throws -> Promise<Int> in
-                return Promise<Int> { (promise) in
-                    promise.reject(error)
+                return Promise<Int> { (_, reject) in
+                    reject(error)
                 }
             })
             .caught({ (e: NSError) in
@@ -483,7 +487,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.fulfill(1)
+        deferred.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
@@ -493,12 +497,12 @@ extension OnePromiseTests {
     func testFulfilledStateMustNotTransitionToAnyOtherState() {
         let expectation = self.expectationWithDescription("wait")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.fulfill(10)
-        promise.fulfill(20)
+        deferred.fulfill(10)
+        deferred.fulfill(20)
 
-        promise.then({ (value) in
+        deferred.promise.then({ (value) in
             XCTAssertEqual(value, 10)
             expectation.fulfill()
         })
@@ -510,17 +514,17 @@ extension OnePromiseTests {
 // MARK: CustomStringConvertible
 extension OnePromiseTests {
     func testDescription() {
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        XCTAssertEqual("\(promise)", "Promise (Pending)")
+        XCTAssertEqual("\(deferred.promise)", "Promise (Pending)")
 
-        promise.fulfill(10)
-        XCTAssertEqual("\(promise)", "Promise (Fulfilled)")
+        deferred.fulfill(10)
+        XCTAssertEqual("\(deferred.promise)", "Promise (Fulfilled)")
 
-        let promise2 = Promise<Int>()
+        let deferred2 = Promise<Int>.deferred()
 
-        promise2.reject(NSError(domain: "", code: -1, userInfo: nil))
-        XCTAssertEqual("\(promise2)", "Promise (Rejected)")
+        deferred2.reject(NSError(domain: "", code: -1, userInfo: nil))
+        XCTAssertEqual("\(deferred2.promise)", "Promise (Rejected)")
     }
 }
 
@@ -546,7 +550,7 @@ extension OnePromiseTests {
     }
 
     func testResolveWithPromise() {
-        let promise1 = Promise<Int>()
+        let promise1 = Promise<Int>.resolve(100)
         let promise2 = Promise<Int>.resolve(promise1)
 
         XCTAssertTrue(promise1 === promise2)
@@ -573,14 +577,14 @@ extension OnePromiseTests {
         let expectation = self.expectationWithDescription("done")
 
         let error   = self.generateRandomError()
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.caught({
+        deferred.promise.caught({
             XCTAssertEqual($0, error)
             expectation.fulfill()
         })
 
-        promise.reject(error)
+        deferred.reject(error)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
@@ -588,15 +592,16 @@ extension OnePromiseTests {
         let expectation = self.expectationWithDescription("done")
 
         let error   = self.generateRandomError()
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.caught(kOnePromiseTestsQueue, {
-            XCTAssertTrue(self.isInTestDispatchQueue())
-            XCTAssertEqual($0, error)
-            expectation.fulfill()
-        })
+        deferred.promise
+            .caught(kOnePromiseTestsQueue, {
+                XCTAssertTrue(self.isInTestDispatchQueue())
+                XCTAssertEqual($0, error)
+                expectation.fulfill()
+            })
 
-        promise.reject(error)
+        deferred.reject(error)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
@@ -606,49 +611,49 @@ extension OnePromiseTests {
     func testFin() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.finally({
+        deferred.promise.finally({
             expectation.fulfill()
         })
 
-        promise.fulfill(1)
+        deferred.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
     func testFinWithDispatchQueue() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.finally(kOnePromiseTestsQueue, {
+        deferred.promise.finally(kOnePromiseTestsQueue, {
             XCTAssertTrue(self.isInTestDispatchQueue())
             expectation.fulfill()
         })
 
-        promise.fulfill(1)
+        deferred.fulfill(1)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
     func testFinWithRejection() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise.finally({
+        deferred.promise.finally({
             expectation.fulfill()
         })
 
-        promise.reject(self.generateRandomError())
+        deferred.reject(self.generateRandomError())
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
     func testThenFin() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise = Promise<Int>()
+        let deferred = Promise<Int>.deferred()
 
-        promise
+        deferred.promise
             .then({ (_) -> Void in
 
             })
@@ -656,7 +661,7 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        promise.reject(self.generateRandomError())
+        deferred.reject(self.generateRandomError())
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
@@ -665,17 +670,19 @@ extension OnePromiseTests {
 extension OnePromiseTests {
     func testAllPromisesFulfilled() {
         var promises: [Promise<Int>] = []
+        var fulfillers: [Int -> Void] = []
 
         for i in 1...10 {
             let subexpectation = self.expectationWithDescription("Promise \(i)")
-            let subpromise = Promise<Int>()
+            let d = Promise<Int>.deferred()
 
-            subpromise
+            d.promise
                 .then({ (_) -> Void in
                     subexpectation.fulfill()
                 })
 
-            promises.append(subpromise)
+            promises.append(d.promise)
+            fulfillers.append(d.fulfill)
         }
 
         let expectation = self.expectationWithDescription("All done")
@@ -689,8 +696,8 @@ extension OnePromiseTests {
                 XCTFail()
             })
 
-        for promise in promises {
-            promise.fulfill(1)
+        for f in fulfillers {
+            f(1)
         }
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
@@ -698,9 +705,15 @@ extension OnePromiseTests {
 
     func testAnyPromisesRejected() {
         var promises: [Promise<Int>] = []
+        var fulfillers: [Int -> Void] = []
+        var rejecters: [NSError -> Void] = []
 
         for _ in 1...10 {
-            promises.append(Promise<Int>())
+            let d = Promise<Int>.deferred()
+
+            promises.append(d.promise)
+            fulfillers.append(d.fulfill)
+            rejecters.append(d.reject)
         }
 
         let expectation = self.expectationWithDescription("All done")
@@ -715,13 +728,14 @@ extension OnePromiseTests {
             })
 
         let error = self.generateRandomError()
-        let rejectTarget = promises.popLast()!
 
-        for promise in promises {
-            promise.fulfill(2)
+        fulfillers.popLast()
+
+        for f in fulfillers {
+            f(2)
         }
 
-        rejectTarget.reject(error)
+        rejecters.last!(error)
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
     }
@@ -731,8 +745,10 @@ extension OnePromiseTests {
 extension OnePromiseTests {
     // Promise.join/2
     func testJoinedTwoPromisesFulfilled() {
-        let intPromise = Promise<Int>()
-        let strPromise = Promise<String>()
+        let intDeferred = Promise<Int>.deferred()
+        let strDeferred = Promise<String>.deferred()
+        let intPromise  = intDeferred.promise
+        let strPromise  = strDeferred.promise
 
         let expectation1 = self.expectationWithDescription("Int Promise")
         let expectation2 = self.expectationWithDescription("String Promise")
@@ -760,15 +776,18 @@ extension OnePromiseTests {
                 XCTFail()
             })
 
-        intPromise.fulfill(1000)
-        strPromise.fulfill("string value")
+        intDeferred.fulfill(1000)
+        strDeferred.fulfill("string value")
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
     }
 
     func testJoinedTwoPromisesRejected() {
-        let intPromise = Promise<Int>()
-        let strPromise = Promise<String>()
+        let intDeferred = Promise<Int>.deferred()
+        let strDeferred = Promise<String>.deferred()
+
+        let intPromise = intDeferred.promise
+        let strPromise = strDeferred.promise
 
         let expectation1 = self.expectationWithDescription("Int Promise")
         let expectation2 = self.expectationWithDescription("String Promise")
@@ -795,17 +814,21 @@ extension OnePromiseTests {
                 expectation.fulfill()
             })
 
-        intPromise.fulfill(1000)
-        strPromise.reject(error)
+        intDeferred.fulfill(1000)
+        strDeferred.reject(error)
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
     }
 
     // Promise.join/3
     func testJoinedThreePromisesFulfilled() {
-        let intPromise    = Promise<Int>()
-        let strPromise    = Promise<String>()
-        let doublePromise = Promise<Double>()
+        let intDeferred    = Promise<Int>.deferred()
+        let strDeferred    = Promise<String>.deferred()
+        let doubleDeferred = Promise<Double>.deferred()
+
+        let intPromise    = intDeferred.promise
+        let strPromise    = strDeferred.promise
+        let doublePromise = doubleDeferred.promise
 
         let expectation1 = self.expectationWithDescription("Int Promise")
         let expectation2 = self.expectationWithDescription("String Promise")
@@ -839,9 +862,9 @@ extension OnePromiseTests {
                 XCTFail()
             })
 
-        intPromise.fulfill(1000)
-        strPromise.fulfill("string value")
-        doublePromise.fulfill(2000.0)
+        intDeferred.fulfill(1000)
+        strDeferred.fulfill("string value")
+        doubleDeferred.fulfill(2000.0)
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
     }
@@ -849,14 +872,18 @@ extension OnePromiseTests {
     func testJoinedThreePromisesRejected() {
         let error = self.generateRandomError()
 
-        let intPromise    = Promise<Int>()
-        let strPromise    = Promise<String>()
-        let doublePromise = Promise<Double>()
+        let intDeferred    = Promise<Int>.deferred()
+        let strDeferred    = Promise<String>.deferred()
+        let doubleDeferred = Promise<Double>.deferred()
+
+        let intPromise    = intDeferred.promise
+        let strPromise    = strDeferred.promise
+        let doublePromise = doubleDeferred.promise
 
         let expectation1 = self.expectationWithDescription("Int Promise")
         let expectation2 = self.expectationWithDescription("String Promise")
         let expectation3 = self.expectationWithDescription("String Promise")
-
+        
         intPromise
             .then({ (_) -> Void in
                 expectation1.fulfill()
@@ -870,9 +897,9 @@ extension OnePromiseTests {
             .then({ (_) -> Void in
                 expectation3.fulfill()
             })
-
+        
         let expectation = self.expectationWithDescription("All done")
-
+        
         Promise.join(intPromise, strPromise, doublePromise)
             .then(kOnePromiseTestsQueue, { (_, _, _) -> Void in
                 XCTFail()
@@ -882,10 +909,10 @@ extension OnePromiseTests {
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
-
-        intPromise.fulfill(1000)
-        doublePromise.fulfill(2000.0)
-        strPromise.reject(error)
+        
+        intDeferred.fulfill(1000)
+        doubleDeferred.fulfill(2000.0)
+        strDeferred.reject(error)
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
     }
@@ -895,10 +922,10 @@ extension OnePromiseTests {
 extension OnePromiseTests {
     private func generateRandomError() -> NSError {
         let code = Int(arc4random_uniform(10001))
-
+        
         return NSError(domain: "test.SomeError", code: code, userInfo: nil)
     }
-
+    
     private func isInTestDispatchQueue() -> Bool {
         return dispatch_get_specific(&testQueueTag) != nil
     }
