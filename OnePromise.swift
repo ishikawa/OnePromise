@@ -385,7 +385,7 @@ extension Promise {
                     dispatch_semaphore_signal(lock)
                 })
         }
-        
+
         return deferred.promise
     }
 }

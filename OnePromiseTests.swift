@@ -883,7 +883,7 @@ extension OnePromiseTests {
         let expectation1 = self.expectationWithDescription("Int Promise")
         let expectation2 = self.expectationWithDescription("String Promise")
         let expectation3 = self.expectationWithDescription("String Promise")
-        
+
         intPromise
             .then({ (_) -> Void in
                 expectation1.fulfill()
@@ -897,9 +897,9 @@ extension OnePromiseTests {
             .then({ (_) -> Void in
                 expectation3.fulfill()
             })
-        
+
         let expectation = self.expectationWithDescription("All done")
-        
+
         Promise.join(intPromise, strPromise, doublePromise)
             .then(kOnePromiseTestsQueue, { (_, _, _) -> Void in
                 XCTFail()
@@ -909,7 +909,7 @@ extension OnePromiseTests {
                 XCTAssertEqual(e, error)
                 expectation.fulfill()
             })
-        
+
         intDeferred.fulfill(1000)
         doubleDeferred.fulfill(2000.0)
         strDeferred.reject(error)
@@ -922,10 +922,10 @@ extension OnePromiseTests {
 extension OnePromiseTests {
     private func generateRandomError() -> NSError {
         let code = Int(arc4random_uniform(10001))
-        
+
         return NSError(domain: "test.SomeError", code: code, userInfo: nil)
     }
-    
+
     private func isInTestDispatchQueue() -> Bool {
         return dispatch_get_specific(&testQueueTag) != nil
     }
