@@ -43,7 +43,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0FDB619C543222E1CBB4794E206E6F44"
+            BlueprintIdentifier = "4C13E92B69A317E464782AE78029110A"
             BuildableName = "OnePromise.framework"
             BlueprintName = "OnePromise"
             ReferencedContainer = "container:Pods/Pods.xcodeproj">
