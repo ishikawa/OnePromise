@@ -281,18 +281,18 @@ extension Promise {
     If `value` is a Promise, returns the promise.
     If `value` is not a Promise, returns a promise that is fulfilled with `value`.
     */
-    class func resolve(value: Promise<ValueType>) -> Promise<ValueType> {
+    public class func resolve(value: Promise<ValueType>) -> Promise<ValueType> {
         return value
     }
 
-    class func resolve(value: ValueType) -> Promise<ValueType> {
+    public class func resolve(value: ValueType) -> Promise<ValueType> {
         return Promise<ValueType> { (fulfill, _) -> Void in
             fulfill(value)
         }
     }
 
     /// Create a promise that is rejected with given error.
-    class func reject(error: NSError) -> Promise<ValueType> {
+    public class func reject(error: NSError) -> Promise<ValueType> {
         return Promise<ValueType> { (_, reject) -> Void in
             reject(error)
         }
@@ -344,11 +344,11 @@ extension Promise {
     If any promise is rejected, the returned promise is rejected.
 
     */
-    class func all(promises: [Promise<T>]) -> Promise<[T]> {
+    public class func all(promises: [Promise<T>]) -> Promise<[T]> {
         return all(dispatch_get_main_queue(), promises)
     }
 
-    class func all(dispatchQueue: dispatch_queue_t, _ promises: [Promise<ValueType>]) -> Promise<[ValueType]> {
+    public class func all(dispatchQueue: dispatch_queue_t, _ promises: [Promise<ValueType>]) -> Promise<[ValueType]> {
         let deferred = Promise<[ValueType]>.deferred()
 
         let lock = dispatch_semaphore_create(1)
@@ -401,7 +401,7 @@ extension Promise {
                 ...
             })
     */
-    class func join<U1>(
+    public class func join<U1>(
         promise1: Promise<ValueType>,
         _ promise2: Promise<U1>)
         -> Promise<(ValueType, U1)>
@@ -409,7 +409,7 @@ extension Promise {
         return Promise.join(dispatch_get_main_queue(), promise1, promise2)
     }
 
-    class func join<U1>(dispatchQueue: dispatch_queue_t,
+    public class func join<U1>(dispatchQueue: dispatch_queue_t,
         _ promise1: Promise<ValueType>,
         _ promise2: Promise<U1>)
         -> Promise<(ValueType, U1)>
@@ -428,7 +428,7 @@ extension Promise {
         return deferred.promise
     }
 
-    class func join<U1, U2>(
+    public class func join<U1, U2>(
         promise1: Promise<ValueType>,
         _ promise2: Promise<U1>,
         _ promise3: Promise<U2>)
@@ -437,7 +437,7 @@ extension Promise {
         return Promise.join(dispatch_get_main_queue(), promise1, promise2, promise3)
     }
 
-    class func join<U1, U2>(dispatchQueue: dispatch_queue_t,
+    public class func join<U1, U2>(dispatchQueue: dispatch_queue_t,
         _ promise1: Promise<ValueType>,
         _ promise2: Promise<U1>,
         _ promise3: Promise<U2>)
