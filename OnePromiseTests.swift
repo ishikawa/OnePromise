@@ -1,5 +1,6 @@
 import UIKit
 import XCTest
+import OnePromise
 
 private var testQueueTag = 0xbeaf
 

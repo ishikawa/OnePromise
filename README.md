@@ -18,7 +18,7 @@ One of the Promises in Swift world just for fun :-)
 
 1. Copy `OnePromise.swift` into your project.
 2. The `Promise` class is one and only one public. If you dislike, rename it as you want.
-3. Your project enforces "100% test coverage"?? Copy `OnePromiseTests.swift`.
+3. Your project enforces "100% test coverage"?? Copy `OnePromiseTests.swift`. Please remove `import OnePromise` line.
 
 ## Installation (CocoaPods)
 
