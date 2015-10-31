@@ -10,7 +10,7 @@ private let kOnePromiseTestsQueue: dispatch_queue_t = {
     dispatch_queue_set_specific(q, &testQueueTag, &testQueueTag, nil)
 
     return q
-    }()
+}()
 
 class OnePromiseTests: XCTestCase {
 

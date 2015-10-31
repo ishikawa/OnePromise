@@ -443,7 +443,7 @@ extension Promise {
 
     /// Same as `Promise.join(dispatch_get_main_queue(), promise1, promise2)`
     public class func join<U1>(
-        promise1: Promise<ValueType>,
+          promise1: Promise<ValueType>,
         _ promise2: Promise<U1>)
         -> Promise<(ValueType, U1)>
     {
