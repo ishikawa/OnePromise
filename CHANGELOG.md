@@ -2,6 +2,12 @@
 
 **IMPORTANT: Version 0.y.z is for initial develpment. Anything may change at any time. The public API should not be considered stable.**
 
+## 0.5.1
+
+- Add deprecated APIs tests.
+- Add missing `public` in some APIs.
+- To prevent forgetting `public`, the test target depends OnePromise.framework.
+
 ## 0.5.0
 
 - Remove `then(nil, onRejected)` syntax to solve type inference problem. You can use `caught(onRejected)` to omit fulfillment handler.
