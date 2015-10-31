@@ -47,6 +47,26 @@ From [Promises/A+](https://promisesaplus.com) specification:
 interacting with a promise is through its `then` method, which registers callbacks to receive either
 a promise's value or the reason why promise cannot be fulfilled.
 
+Suppose you have the API which takes callbacks function like:
+
+    func invokeRpc(method: String, params: [String:AnyObject], onComplete: ([String:AnyObject]) -> Void, onError: (NSError) -> Void) {...}
+
+How to create a promise invokes this function:
+
+    let promise = Promise { (fulfill, reject) in
+        self.invokeRpc("echo.hello", params: [ "greeting": "hi" ], onComplete: fulfill, onError: reject)
+    }
+
+Then you can receive a response (or error) from this promise:
+
+    promise
+        .then({ (response) in
+            ...
+        })
+        .caught({ (error) in
+            fatalError("Failed: \(error)")
+        })
+
 */
 public class Promise<T> {
 
@@ -115,10 +135,12 @@ public class Promise<T> {
         return (promise: promise, fulfill: fulfill, reject: reject)
     }
 
+    /// Same as `then(dispatch_get_main_queue(), onFulfilled, onRejected)`
     public func then<U>(onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
+    /// Same as `then(dispatch_get_main_queue(), onFulfilled, onRejected)`
     public func then<U>(onFulfilled: ValueType throws -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
@@ -274,24 +296,19 @@ extension Promise: CustomStringConvertible {
 
 // MARK: resolve and reject
 extension Promise {
-    /**
-
-    Create a promise that is resolved with given value.
-
-    If `value` is a Promise, returns the promise.
-    If `value` is not a Promise, returns a promise that is fulfilled with `value`.
-    */
-    public class func resolve(value: Promise<ValueType>) -> Promise<ValueType> {
-        return value
+    /// Returns the `promise`.
+    public class func resolve(promise: Promise<ValueType>) -> Promise<ValueType> {
+        return promise
     }
 
+    /// Creates a promise will be immediately resolved with given `value`.
     public class func resolve(value: ValueType) -> Promise<ValueType> {
         return Promise<ValueType> { (fulfill, _) -> Void in
             fulfill(value)
         }
     }
 
-    /// Create a promise that is rejected with given error.
+    /// Creates a promise that is rejected with given error.
     public class func reject(error: NSError) -> Promise<ValueType> {
         return Promise<ValueType> { (_, reject) -> Void in
             reject(error)
@@ -327,9 +344,12 @@ extension Promise {
         })
     }
 
+    /// Same as `caught(dispatch_get_main_queue(), onRejected)`
     public func caught(onRejected: (NSError) -> Void) -> Promise<ValueType> {
         return self.caught(dispatch_get_main_queue(), onRejected)
     }
+
+    /// Same as `finally(dispatch_get_main_queue(), callback)`
     public func finally(callback: () -> Void) -> Promise<ValueType> {
         return finally(dispatch_get_main_queue(), callback)
     }
@@ -344,10 +364,6 @@ extension Promise {
     If any promise is rejected, the returned promise is rejected.
 
     */
-    public class func all(promises: [Promise<T>]) -> Promise<[T]> {
-        return all(dispatch_get_main_queue(), promises)
-    }
-
     public class func all(dispatchQueue: dispatch_queue_t, _ promises: [Promise<ValueType>]) -> Promise<[ValueType]> {
         let deferred = Promise<[ValueType]>.deferred()
 
@@ -388,6 +404,11 @@ extension Promise {
 
         return deferred.promise
     }
+
+    /// Same as `all(dispatch_get_main_queue(), promises)`
+    public class func all(promises: [Promise<T>]) -> Promise<[T]> {
+        return all(dispatch_get_main_queue(), promises)
+    }
 }
 
 // MARK: Promise.join
@@ -401,14 +422,6 @@ extension Promise {
                 ...
             })
     */
-    public class func join<U1>(
-        promise1: Promise<ValueType>,
-        _ promise2: Promise<U1>)
-        -> Promise<(ValueType, U1)>
-    {
-        return Promise.join(dispatch_get_main_queue(), promise1, promise2)
-    }
-
     public class func join<U1>(dispatchQueue: dispatch_queue_t,
         _ promise1: Promise<ValueType>,
         _ promise2: Promise<U1>)
@@ -428,15 +441,24 @@ extension Promise {
         return deferred.promise
     }
 
-    public class func join<U1, U2>(
-        promise1: Promise<ValueType>,
-        _ promise2: Promise<U1>,
-        _ promise3: Promise<U2>)
-        -> Promise<(ValueType, U1, U2)>
+    /// Same as `Promise.join(dispatch_get_main_queue(), promise1, promise2)`
+    public class func join<U1>(
+          promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>)
+        -> Promise<(ValueType, U1)>
     {
-        return Promise.join(dispatch_get_main_queue(), promise1, promise2, promise3)
+        return Promise.join(dispatch_get_main_queue(), promise1, promise2)
     }
 
+    /**
+
+    `Promise.join(...)` for 3 promises.
+
+        Promise.join(promise1, promise2, promise3)
+            .then({ (v1, v2, v3) -> Void in
+                ...
+            })
+    */
     public class func join<U1, U2>(dispatchQueue: dispatch_queue_t,
         _ promise1: Promise<ValueType>,
         _ promise2: Promise<U1>,
@@ -458,5 +480,15 @@ extension Promise {
         promise3.caught(dispatchQueue, deferred.reject)
 
         return deferred.promise
+    }
+
+    /// Same as `Promise.join(dispatch_get_main_queue(), promise1, promise2, promise3)`
+    public class func join<U1, U2>(
+          promise1: Promise<ValueType>,
+        _ promise2: Promise<U1>,
+        _ promise3: Promise<U2>)
+        -> Promise<(ValueType, U1, U2)>
+    {
+        return Promise.join(dispatch_get_main_queue(), promise1, promise2, promise3)
     }
 }
