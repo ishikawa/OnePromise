@@ -5,6 +5,7 @@
 ## 0.5.0
 
 - Remove `then(nil, onRejected)` syntax to solve type inference problem. You can use `caught(onRejected)` to omit fulfillment handler.
+- Deprecate `Promise#fulfill(value)` and `Promise#reject(error)` in favor of `Promise { (fulfill, reject) in ... }` initialization method. These methods will be dropped in a future version.
 
 ## 0.4.0
 
