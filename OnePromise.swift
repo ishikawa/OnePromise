@@ -492,3 +492,42 @@ extension Promise {
         return Promise.join(dispatch_get_main_queue(), promise1, promise2, promise3)
     }
 }
+
+// MARK: Timer
+extension Promise {
+    /// Returns a promise that will be resolved after `seconds` seconds.
+    public class func delay(seconds: NSTimeInterval) -> Promise<Void> {
+        return Promise<Void>.delay((), seconds)
+    }
+
+    /// Returns a promise that will be resolved with given `promise`'s fulfillment value
+    /// after `seconds` seconds.
+    public class func delay(promise: Promise<T>, _ seconds: NSTimeInterval) -> Promise<T> {
+        return promise.then({ Promise.delay($0, seconds) })
+    }
+
+    /// Returns a promise that will be resolved with given `value` after `seconds` seconds.
+    public class func delay(value: T, _ seconds: NSTimeInterval) -> Promise<T> {
+        let delay = seconds * Double(NSEC_PER_SEC)
+        let time  = dispatch_time(DISPATCH_TIME_NOW, Int64(delay))
+
+        return Promise<T> { (fulfill, _) -> Void in
+            dispatch_after(time, dispatch_get_main_queue(), {
+                fulfill(value)
+            })
+        }
+    }
+
+    /**
+    Same as `Promise.delay(self, seconds)`, so you can write:
+
+        promise
+            .then({
+                ...
+            })
+            .delay(0.5)
+    */
+    public func delay(seconds: NSTimeInterval) -> Promise<ValueType> {
+        return Promise.delay(self, seconds)
+    }
+}
