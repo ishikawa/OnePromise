@@ -918,6 +918,36 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: Deprecated APIs
+extension OnePromiseTests {
+    func testDeperecatedAPIs() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+
+        let promise1 = Promise<Int> { (promise) -> Void in
+            dispatch_async(kOnePromiseTestsQueue, {
+                promise.fulfill(100)
+            })
+        }
+
+        let promise2 = Promise<Int> { (promise) -> Void in
+            dispatch_async(kOnePromiseTestsQueue, {
+                promise.reject(self.generateRandomError())
+            })
+        }
+
+        promise1.then({ (value) in
+            expectation1.fulfill()
+            XCTAssertEqual(value, 100)
+        })
+        promise2.caught({ (_) in
+            expectation2.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+}
+
 // MARK: Helpers
 extension OnePromiseTests {
     private func generateRandomError() -> NSError {
