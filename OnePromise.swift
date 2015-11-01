@@ -495,10 +495,6 @@ extension Promise {
 
 // MARK: Timer
 extension Promise {
-    /// Returns a promise that will be resolved after `seconds` seconds.
-    public class func delay(dispatchQueue: dispatch_queue_t, _ seconds: NSTimeInterval) -> Promise<Void> {
-        return Promise<Void>.delay(dispatchQueue, (), seconds)
-    }
 
     /// Returns a promise that will be resolved with given `promise`'s fulfillment value
     /// after `seconds` seconds.
@@ -529,11 +525,6 @@ extension Promise {
     */
     public func delay(dispatchQueue: dispatch_queue_t, _ seconds: NSTimeInterval) -> Promise<ValueType> {
         return Promise.delay(dispatchQueue, self, seconds)
-    }
-
-    /// Same as `Promise.delay(dispatch_get_main_queue(), seconds)`
-    public class func delay(seconds: NSTimeInterval) -> Promise<Void> {
-        return Promise.delay(dispatch_get_main_queue(), seconds)
     }
 
     /// Same as `Promise.delay(dispatch_get_main_queue(), promise, seconds)`
