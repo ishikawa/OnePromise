@@ -919,6 +919,73 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: Timer
+extension OnePromiseTests {
+    func testDelay() {
+        self.delayTest {
+            Promise
+                .resolve(1000)
+                .delay($0)
+                .then({ (value) in
+                    XCTAssertEqual(value, 1000)
+                })
+        }
+    }
+
+    func testDelayValue() {
+        self.delayTest {
+            Promise
+                .delay(2000, $0)
+                .then({ (value) in
+                    XCTAssertEqual(value, 2000)
+                })
+        }
+    }
+
+    func testDelayPromise() {
+        self.delayTest {
+            Promise
+                .delay(Promise.resolve(3000), $0)
+                .then({ (value) in
+                    XCTAssertEqual(value, 3000)
+                })
+        }
+    }
+
+    private func delayTest<T>(timeToPromisifier: (NSTimeInterval) -> Promise<T>) {
+        let expectation = self.expectationWithDescription("done")
+
+        var resolved = false
+
+        // (1) pre condition
+        do {
+            let time = dispatch_time(DISPATCH_TIME_NOW, Int64(0.1 * Double(NSEC_PER_SEC)))
+
+            dispatch_after(time, kOnePromiseTestsQueue, {
+                XCTAssertFalse(resolved)
+                XCTAssertTrue(self.isInTestDispatchQueue())
+            })
+        }
+
+        // (2) resolution later
+        timeToPromisifier(0.3).then({ (_) in
+            resolved = true
+        })
+
+        // (3) post condition
+        do {
+            let time = dispatch_time(DISPATCH_TIME_NOW, Int64(0.5 * Double(NSEC_PER_SEC)))
+
+            dispatch_after(time, kOnePromiseTestsQueue, {
+                XCTAssertTrue(resolved)
+                expectation.fulfill()
+            })
+        }
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+}
+
 // MARK: Deprecated APIs
 extension OnePromiseTests {
     func testDeperecatedAPIs() {
