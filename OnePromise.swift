@@ -145,6 +145,11 @@ public class Promise<T> {
         return self.then(dispatch_get_main_queue(), onFulfilled, onRejected)
     }
 
+    /**
+    Register callback to receive fulfillment/rejection value.
+    
+    - Returns: A new promise chained from the promise returned from `onFulfilled` handler
+    */
     public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         let deferred = Promise<U>.deferred()
 
@@ -158,6 +163,11 @@ public class Promise<T> {
         return deferred.promise
     }
 
+    /**
+    Register callback to receive fulfillment/rejection value.
+
+    - Returns: A new promise
+    */
     public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> U, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
         let deferred = Promise<U>.deferred()
 
