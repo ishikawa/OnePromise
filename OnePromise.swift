@@ -294,8 +294,15 @@ extension Promise: CustomStringConvertible {
     }
 }
 
-// MARK: resolve and reject
+// =====================================================================
+// MARK: - Utility
+// =====================================================================
+
 extension Promise {
+    // -----------------------------------------------------------------
+    // MARK: resolve and reject
+    // -----------------------------------------------------------------
+
     /// Returns the `promise`.
     public class func resolve(promise: Promise<ValueType>) -> Promise<ValueType> {
         return promise
@@ -314,15 +321,23 @@ extension Promise {
             reject(error)
         }
     }
-}
 
-// MARK: catch and finally
-extension Promise {
+    // -----------------------------------------------------------------
+    // MARK: caught
+    // -----------------------------------------------------------------
     /// `caught` is sugar, equivalent to `promise.then(nil, onRejected)`.
     public func caught(dispatchQueue: dispatch_queue_t, _ onRejected: (NSError) -> Void) -> Promise<ValueType> {
         return self.then(dispatchQueue, { $0 }, onRejected)
     }
 
+    /// Same as `caught(dispatch_get_main_queue(), onRejected)`
+    public func caught(onRejected: (NSError) -> Void) -> Promise<ValueType> {
+        return self.caught(dispatch_get_main_queue(), onRejected)
+    }
+
+    // -----------------------------------------------------------------
+    // MARK: finally
+    // -----------------------------------------------------------------
     /**
 
     `finally` will be invoked regardless of the promise is fulfilled or rejected, allows you to
@@ -344,19 +359,20 @@ extension Promise {
         })
     }
 
-    /// Same as `caught(dispatch_get_main_queue(), onRejected)`
-    public func caught(onRejected: (NSError) -> Void) -> Promise<ValueType> {
-        return self.caught(dispatch_get_main_queue(), onRejected)
-    }
-
     /// Same as `finally(dispatch_get_main_queue(), callback)`
     public func finally(callback: () -> Void) -> Promise<ValueType> {
         return finally(dispatch_get_main_queue(), callback)
     }
 }
 
-// MARK: Promise.all
+// =====================================================================
+// MARK: - Collection
+// =====================================================================
+
 extension Promise {
+    // -----------------------------------------------------------------
+    // MARK: all
+    // -----------------------------------------------------------------
     /**
 
     Returns a promise which is fulfilled when all the promises in `promises` are fulfilled.
@@ -409,10 +425,10 @@ extension Promise {
     public class func all(promises: [Promise<T>]) -> Promise<[T]> {
         return all(dispatch_get_main_queue(), promises)
     }
-}
 
-// MARK: Promise.join
-extension Promise {
+    // -----------------------------------------------------------------
+    // MARK: join
+    // -----------------------------------------------------------------
     /**
     Like `all`, but for multiple discrete promises. `Promise.join(...)` is easier and
     more performant (by reducing internal lock) to use fixed amount of discrete promises.
@@ -493,9 +509,14 @@ extension Promise {
     }
 }
 
-// MARK: Timer
+// =====================================================================
+// MARK: - Timer
+// =====================================================================
 extension Promise {
 
+    // -----------------------------------------------------------------
+    // MARK: delay
+    // -----------------------------------------------------------------
     /// Returns a promise that will be resolved with given `promise`'s fulfillment value
     /// after `seconds` seconds.
     public class func delay(dispatchQueue: dispatch_queue_t, _ promise: Promise<T>, _ seconds: NSTimeInterval) -> Promise<T> {
