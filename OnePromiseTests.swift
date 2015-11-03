@@ -12,6 +12,10 @@ private let kOnePromiseTestsQueue: dispatch_queue_t = {
     return q
 }()
 
+enum ErrorWithValue: ErrorType {
+    case IntError(Int)
+}
+
 class OnePromiseTests: XCTestCase {
 
     func testCreateWithBlock() {
@@ -46,6 +50,21 @@ class OnePromiseTests: XCTestCase {
             })
 
         deferred.fulfill(1000)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testCreateWithBlockThrows() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise: Promise<Void> = Promise<Void>({ (_, _) throws in
+            throw ErrorWithValue.IntError(1000)
+        })
+
+        promise.caught({ (error) -> Void in
+            XCTAssert(error.domain.hasSuffix(".ErrorWithValue"))
+            expectation.fulfill()
+        })
+
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }

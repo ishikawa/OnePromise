@@ -98,8 +98,13 @@ public class Promise<T> {
     which can be called to fulfill or reject the created promise.
 
     */
-    public init(_ block: (ValueType -> Void, NSError -> Void) -> Void) {
-        block(self.doFulfill, self.doReject)
+    public init(_ block: (ValueType -> Void, NSError -> Void) throws -> Void) {
+        do {
+            try block(self.doFulfill, self.doReject)
+        }
+        catch let error as NSError {
+            self.doReject(error)
+        }
     }
 
     /**
@@ -190,7 +195,8 @@ public class Promise<T> {
             dispatch_async(dispatchQueue, {
                 do {
                     try onFulfilled(value).then(dispatchQueue, nextFulfill, nextReject)
-                } catch let error as NSError {
+                }
+                catch let error as NSError {
                     nextReject(error)
                 }
             })
