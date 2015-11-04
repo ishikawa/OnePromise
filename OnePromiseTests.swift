@@ -427,7 +427,7 @@ extension OnePromiseTests {
     }
 
     func testOnRejectWithCustomErrorType() {
-        let expectation = self.expectationWithDescription("wait")
+        let expectation = self.expectationWithDescription("done")
         let deferred = Promise<Int>.deferred()
 
         deferred.promise
@@ -439,6 +439,23 @@ extension OnePromiseTests {
             })
 
         deferred.reject(ErrorWithValue.IntError(2000) as NSError)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testOnRejectWithCustomErrorTypeThenFulfill() {
+        let expectation = self.expectationWithDescription("done")
+        let deferred = Promise<Int>.deferred()
+
+        deferred.promise
+            .caught({ (e: ErrorWithValue) in
+                XCTFail()
+            })
+            .then({ (value) -> Void in
+                XCTAssertEqual(value, 2000)
+                expectation.fulfill()
+            })
+
+        deferred.fulfill(2000)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
