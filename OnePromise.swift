@@ -152,7 +152,7 @@ public class Promise<T> {
 
     /**
     Register callback to receive fulfillment/rejection value.
-    
+
     - Returns: A new promise chained from the promise returned from `onFulfilled` handler
     */
     public func then<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: ValueType throws -> Promise<U>, _ onRejected: (NSError -> Void)? = nil) -> Promise<U> {
@@ -348,6 +348,37 @@ extension Promise {
 
     /// Same as `caught(dispatch_get_main_queue(), onRejected)`
     public func caught(onRejected: (NSError) -> Void) -> Promise<ValueType> {
+        return self.caught(dispatch_get_main_queue(), onRejected)
+    }
+
+    /**
+
+    This is an extension to `.caught` to work with Swift's `ErrorType` instead of `NSError`.
+    You can specialize `.caught` method with appropriate `ErrorType` protocol.
+
+        promise
+            .caught({ (e: CustomError) in
+                ...
+            })
+
+    **IMPORTANT: If the error is not conformed with `E`, it will be not handled.**
+
+    */
+    public func caught<E: ErrorType>(dispatchQueue: dispatch_queue_t, _ onRejected: (E) -> Void)
+        -> Promise<ValueType>
+    {
+        return self.then(dispatchQueue, { $0 }, { (e: NSError) -> Void in
+            // We can't directly convert NSError to E
+            let err = e as ErrorType
+
+            if let err = err as? E {
+                onRejected(err)
+            }
+        })
+    }
+
+    /// Same as `caught(dispatch_get_main_queue(), onRejected)`
+    public func caught<E: ErrorType>(onRejected: (E) -> Void) -> Promise<ValueType> {
         return self.caught(dispatch_get_main_queue(), onRejected)
     }
 

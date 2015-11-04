@@ -425,6 +425,22 @@ extension OnePromiseTests {
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+
+    func testOnRejectWithCustomErrorType() {
+        let expectation = self.expectationWithDescription("wait")
+        let deferred = Promise<Int>.deferred()
+
+        deferred.promise
+            .caught({ (e: ErrorWithValue) in
+                if case .IntError(let value) = e {
+                    XCTAssertEqual(value, 2000)
+                }
+                expectation.fulfill()
+            })
+
+        deferred.reject(ErrorWithValue.IntError(2000) as NSError)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: onRejected: Error propagation
