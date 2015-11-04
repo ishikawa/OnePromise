@@ -338,6 +338,11 @@ extension Promise {
         }
     }
 
+    /// Same as `reject(err as NSError)`
+    public class func reject(error: ErrorType) -> Promise<ValueType> {
+        return reject(error as NSError)
+    }
+
     // -----------------------------------------------------------------
     // MARK: caught
     // -----------------------------------------------------------------

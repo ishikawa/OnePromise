@@ -14,6 +14,7 @@ private let kOnePromiseTestsQueue: dispatch_queue_t = {
 
 enum ErrorWithValue: ErrorType {
     case IntError(Int)
+    case StrError(String)
 }
 
 class OnePromiseTests: XCTestCase {
@@ -617,6 +618,25 @@ extension OnePromiseTests {
 
         promise.caught({
             XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testRejectedWithErrorTypePromise() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>.reject(ErrorWithValue.StrError("panic!"))
+
+        promise.caught({ (err: ErrorWithValue) in
+            if case .StrError(let str) = err {
+                XCTAssertEqual(str, "panic!")
+            }
+            else {
+                XCTFail()
+            }
+
             expectation.fulfill()
         })
 
