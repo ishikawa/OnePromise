@@ -12,6 +12,11 @@ private let kOnePromiseTestsQueue: dispatch_queue_t = {
     return q
 }()
 
+enum ErrorWithValue: ErrorType {
+    case IntError(Int)
+    case StrError(String)
+}
+
 class OnePromiseTests: XCTestCase {
 
     func testCreateWithBlock() {
@@ -23,8 +28,8 @@ class OnePromiseTests: XCTestCase {
             }
         }
 
-        promise.then({ (value) -> Void in
-            XCTAssertEqual(value, 1)
+        promise.then({
+            XCTAssertEqual($0, 1)
             expectation.fulfill()
         })
 
@@ -37,15 +42,30 @@ class OnePromiseTests: XCTestCase {
         let deferred = Promise<Int>.deferred()
 
         deferred.promise
-            .then({ (value:Int) -> Int in
-                return value * 2
+            .then({
+                return $0 * 2
             })
-            .then({ (value:Int) in
-                XCTAssertEqual(value, 2000)
+            .then({
+                XCTAssertEqual($0, 2000)
                 expectation.fulfill()
             })
 
         deferred.fulfill(1000)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testCreateWithBlockThrows() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Void>({ (_, _) throws in
+            throw ErrorWithValue.IntError(1000)
+        })
+
+        promise.caught({
+            XCTAssert($0.domain.hasSuffix(".ErrorWithValue"))
+            expectation.fulfill()
+        })
+
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 }
@@ -406,6 +426,39 @@ extension OnePromiseTests {
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+
+    func testOnRejectWithCustomErrorType() {
+        let expectation = self.expectationWithDescription("done")
+        let deferred = Promise<Int>.deferred()
+
+        deferred.promise
+            .caught({ (e: ErrorWithValue) in
+                if case .IntError(let value) = e {
+                    XCTAssertEqual(value, 2000)
+                }
+                expectation.fulfill()
+            })
+
+        deferred.reject(ErrorWithValue.IntError(2000) as NSError)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testOnRejectWithCustomErrorTypeThenFulfill() {
+        let expectation = self.expectationWithDescription("done")
+        let deferred = Promise<Int>.deferred()
+
+        deferred.promise
+            .caught({ (e: ErrorWithValue) in
+                XCTFail()
+            })
+            .then({ (value) -> Void in
+                XCTAssertEqual(value, 2000)
+                expectation.fulfill()
+            })
+
+        deferred.fulfill(2000)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: onRejected: Error propagation
@@ -565,6 +618,25 @@ extension OnePromiseTests {
 
         promise.caught({
             XCTAssertEqual($0, error)
+            expectation.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testRejectedWithErrorTypePromise() {
+        let expectation = self.expectationWithDescription("done")
+
+        let promise = Promise<Int>.reject(ErrorWithValue.StrError("panic!"))
+
+        promise.caught({ (err: ErrorWithValue) in
+            if case .StrError(let str) = err {
+                XCTAssertEqual(str, "panic!")
+            }
+            else {
+                XCTFail()
+            }
+
             expectation.fulfill()
         })
 
