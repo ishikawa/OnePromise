@@ -28,8 +28,8 @@ class OnePromiseTests: XCTestCase {
             }
         }
 
-        promise.then({ (value) -> Void in
-            XCTAssertEqual(value, 1)
+        promise.then({
+            XCTAssertEqual($0, 1)
             expectation.fulfill()
         })
 
@@ -42,11 +42,11 @@ class OnePromiseTests: XCTestCase {
         let deferred = Promise<Int>.deferred()
 
         deferred.promise
-            .then({ (value:Int) -> Int in
-                return value * 2
+            .then({
+                return $0 * 2
             })
-            .then({ (value:Int) in
-                XCTAssertEqual(value, 2000)
+            .then({
+                XCTAssertEqual($0, 2000)
                 expectation.fulfill()
             })
 
@@ -57,12 +57,12 @@ class OnePromiseTests: XCTestCase {
     func testCreateWithBlockThrows() {
         let expectation = self.expectationWithDescription("done")
 
-        let promise: Promise<Void> = Promise<Void>({ (_, _) throws in
+        let promise = Promise<Void>({ (_, _) throws in
             throw ErrorWithValue.IntError(1000)
         })
 
-        promise.caught({ (error) -> Void in
-            XCTAssert(error.domain.hasSuffix(".ErrorWithValue"))
+        promise.caught({
+            XCTAssert($0.domain.hasSuffix(".ErrorWithValue"))
             expectation.fulfill()
         })
 
