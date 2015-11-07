@@ -2,6 +2,12 @@
 
 **IMPORTANT: Version 0.y.z is for initial develpment. Anything may change at any time. The public API should not be considered stable.**
 
+## 0.6.0
+
+- Add `Promise.delay()`
+- More API documentation (inline comments)
+- Error handling with `ErrorType`
+
 ## 0.5.1
 
 - Add deprecated APIs tests.
