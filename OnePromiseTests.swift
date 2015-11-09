@@ -677,6 +677,26 @@ extension OnePromiseTests {
         deferred.reject(error)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+
+    func testIgnoreErrorInCaughtHandler() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+
+        let promise = Promise<Int> { (_, reject) in
+            reject(self.generateRandomError())
+        }
+
+        // The #1 arg in error handler can be omitted.
+        promise
+            .then({ (_) in }, { (_) in
+                expectation1.fulfill()
+            })
+            .caught({ (_) in
+                expectation2.fulfill()
+            })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: finally
