@@ -431,6 +431,8 @@ extension Promise {
     The returned promise's fulfillment value is array of `T`.
     If any promise is rejected, the returned promise is rejected.
 
+    Returns array with fulfillment values at respective positions to the original array.
+
     */
     public class func all(dispatchQueue: dispatch_queue_t, _ promises: [Promise<ValueType>]) -> Promise<[ValueType]> {
         let deferred = Promise<[ValueType]>.deferred()

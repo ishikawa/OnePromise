@@ -761,9 +761,9 @@ extension OnePromiseTests {
 
 // MARK: Promise.all
 extension OnePromiseTests {
-    func testAllPromisesFulfilled() {
+    private func createPromises() -> (promises: [Promise<Int>], fulfills: [Int -> Void]) {
         var promises: [Promise<Int>] = []
-        var fulfillers: [Int -> Void] = []
+        var fulfills: [Int -> Void] = []
 
         for i in 1...10 {
             let subexpectation = self.expectationWithDescription("Promise \(i)")
@@ -775,8 +775,14 @@ extension OnePromiseTests {
                 })
 
             promises.append(d.promise)
-            fulfillers.append(d.fulfill)
+            fulfills.append(d.fulfill)
         }
+
+        return (promises: promises, fulfills: fulfills)
+    }
+
+    func testAllPromisesFulfilledInDispatchQueue() {
+        let (promises, fulfills) = createPromises()
 
         let expectation = self.expectationWithDescription("All done")
 
@@ -785,12 +791,33 @@ extension OnePromiseTests {
                 XCTAssertTrue(self.isInTestDispatchQueue())
                 expectation.fulfill()
             })
+
+        for f in fulfills {
+            f(1)
+        }
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    func testAllPromisesFulfilledInReverseOrder() {
+        let (promises, fulfills) = createPromises()
+
+        let expectation = self.expectationWithDescription("All done")
+
+        let fulfillments = (1...fulfills.count).map { $0 * 2 }
+
+        Promise.all(promises)
+            .then({ (values) -> Void in
+                XCTAssertEqual(values, fulfillments)
+                expectation.fulfill()
+            })
             .caught({ (_) -> Void in
                 XCTFail()
             })
 
-        for f in fulfillers {
-            f(1)
+        // Fulfill reverse order
+        for (fulfill, value) in zip(fulfills, fulfillments).reverse() {
+            fulfill(value)
         }
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
