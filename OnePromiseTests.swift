@@ -677,6 +677,26 @@ extension OnePromiseTests {
         deferred.reject(error)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+
+    func testIgnoreErrorInCaughtHandler() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+
+        let promise = Promise<Int> { (_, reject) in
+            reject(self.generateRandomError())
+        }
+
+        // The #1 arg in error handler can be omitted.
+        promise
+            .then({ (_) in }, { (_) in
+                expectation1.fulfill()
+            })
+            .caught({ (_) in
+                expectation2.fulfill()
+            })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: finally
@@ -741,9 +761,9 @@ extension OnePromiseTests {
 
 // MARK: Promise.all
 extension OnePromiseTests {
-    func testAllPromisesFulfilled() {
+    private func createPromises() -> (promises: [Promise<Int>], fulfills: [Int -> Void]) {
         var promises: [Promise<Int>] = []
-        var fulfillers: [Int -> Void] = []
+        var fulfills: [Int -> Void] = []
 
         for i in 1...10 {
             let subexpectation = self.expectationWithDescription("Promise \(i)")
@@ -755,8 +775,14 @@ extension OnePromiseTests {
                 })
 
             promises.append(d.promise)
-            fulfillers.append(d.fulfill)
+            fulfills.append(d.fulfill)
         }
+
+        return (promises: promises, fulfills: fulfills)
+    }
+
+    func testAllPromisesFulfilledInDispatchQueue() {
+        let (promises, fulfills) = createPromises()
 
         let expectation = self.expectationWithDescription("All done")
 
@@ -765,12 +791,62 @@ extension OnePromiseTests {
                 XCTAssertTrue(self.isInTestDispatchQueue())
                 expectation.fulfill()
             })
-            .caught({ (_) -> Void in
-                XCTFail()
+
+        for f in fulfills {
+            f(1)
+        }
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    func testAllPromisesFulfilledInReverseOrder() {
+        let (promises, fulfills) = createPromises()
+
+        let expectation = self.expectationWithDescription("All done")
+
+        let fulfillments = (1...fulfills.count).map { $0 * 2 }
+
+        Promise.all(promises)
+            .then({ (values) -> Void in
+                XCTAssertEqual(values, fulfillments)
+                expectation.fulfill()
             })
 
-        for f in fulfillers {
-            f(1)
+        // Fulfill reverse order
+        for (fulfill, value) in zip(fulfills, fulfillments).reverse() {
+            fulfill(value)
+        }
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    func testAllPromisesFulfilledInRandomOrder() {
+        let (promises, fulfills) = createPromises()
+
+        let expectation = self.expectationWithDescription("All done")
+
+        let fulfillments = (1...fulfills.count).map { $0 * 2 }
+
+        Promise.all(promises)
+            .then({ (values) -> Void in
+                XCTAssertEqual(values, fulfillments)
+                expectation.fulfill()
+            })
+
+        // Shuffle
+        var shuffled = fulfills
+
+        for i in (0..<shuffled.count) {
+            let j = Int(arc4random_uniform(UInt32(shuffled.count)))
+
+            if i != j {
+                swap(&shuffled[i], &shuffled[j])
+            }
+        }
+
+        // Fulfill reverse order
+        for (fulfill, value) in zip(fulfills, fulfillments).reverse() {
+            fulfill(value)
         }
 
         self.waitForExpectationsWithTimeout(3.0, handler: nil)
