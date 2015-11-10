@@ -701,20 +701,26 @@ extension OnePromiseTests {
 
 // MARK: finally
 extension OnePromiseTests {
-    func testFin() {
-        let expectation = self.expectationWithDescription("done")
+    func testFinally() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
 
         let deferred = Promise<Int>.deferred()
 
-        deferred.promise.finally({
-            expectation.fulfill()
-        })
+        deferred.promise
+            .finally({
+                expectation1.fulfill()
+            })
+            .then({ (n) in
+                expectation2.fulfill()
+                XCTAssertEqual(n, 555)
+            })
 
-        deferred.fulfill(1)
+        deferred.fulfill(555)
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
-    func testFinWithDispatchQueue() {
+    func testFinallyWithDispatchQueue() {
         let expectation = self.expectationWithDescription("done")
 
         let deferred = Promise<Int>.deferred()
@@ -728,7 +734,7 @@ extension OnePromiseTests {
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
-    func testFinWithRejection() {
+    func testFinallyWithRejection() {
         let expectation = self.expectationWithDescription("done")
 
         let deferred = Promise<Int>.deferred()
@@ -741,7 +747,7 @@ extension OnePromiseTests {
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
-    func testThenFin() {
+    func testThenFinally() {
         let expectation = self.expectationWithDescription("done")
 
         let deferred = Promise<Int>.deferred()

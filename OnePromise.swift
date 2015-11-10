@@ -406,9 +406,9 @@ extension Promise {
                 callback()
                 return value
             },
-            { (error: NSError) in
+            { (_) in
                 callback()
-        })
+            })
     }
 
     /// Same as `finally(dispatch_get_main_queue(), callback)`
