@@ -811,9 +811,38 @@ extension OnePromiseTests {
                 XCTAssertEqual(values, fulfillments)
                 expectation.fulfill()
             })
-            .caught({ (_) -> Void in
-                XCTFail()
+
+        // Fulfill reverse order
+        for (fulfill, value) in zip(fulfills, fulfillments).reverse() {
+            fulfill(value)
+        }
+
+        self.waitForExpectationsWithTimeout(3.0, handler: nil)
+    }
+
+    func testAllPromisesFulfilledInRandomOrder() {
+        let (promises, fulfills) = createPromises()
+
+        let expectation = self.expectationWithDescription("All done")
+
+        let fulfillments = (1...fulfills.count).map { $0 * 2 }
+
+        Promise.all(promises)
+            .then({ (values) -> Void in
+                XCTAssertEqual(values, fulfillments)
+                expectation.fulfill()
             })
+
+        // Shuffle
+        var shuffled = fulfills
+
+        for i in (0..<shuffled.count) {
+            let j = Int(arc4random_uniform(UInt32(shuffled.count)))
+
+            if i != j {
+                swap(&shuffled[i], &shuffled[j])
+            }
+        }
 
         // Fulfill reverse order
         for (fulfill, value) in zip(fulfills, fulfillments).reverse() {
