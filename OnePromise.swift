@@ -437,23 +437,23 @@ extension Promise {
     public class func all(dispatchQueue: dispatch_queue_t, _ promises: [Promise<ValueType>]) -> Promise<[ValueType]> {
         let deferred = Promise<[ValueType]>.deferred()
 
+        // To preserve positions, use dictionary as a sparse array.
+        var values: [Int:T]? = Dictionary(minimumCapacity: promises.count)
+
         let lock = dispatch_semaphore_create(1)
 
-        var pending = true
-        var values: [T] = []
-
-        for subpromise in promises {
+        for (i, subpromise) in promises.enumerate() {
             subpromise.then(dispatchQueue,
                 { (value) -> Void in
                     dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER)
                     do {
-                        if pending {
-                            values.append(value)
+                        if values != nil {
+                            assert( values![i] == nil )
+                            values![i] = value
 
-                            if values.count == promises.count {
-                                deferred.fulfill(values)
-                                pending = false
-                                values.removeAll(keepCapacity: false)
+                            if values!.count == promises.count {
+                                deferred.fulfill((0..<promises.count).map { values![$0]! })
+                                values = nil
                             }
                         }
                     }
@@ -462,10 +462,9 @@ extension Promise {
                 { (error) -> Void in
                     dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER)
                     do {
-                        if pending {
+                        if values != nil {
                             deferred.reject(error)
-                            pending = false
-                            values.removeAll(keepCapacity: false)
+                            values = nil
                         }
                     }
                     dispatch_semaphore_signal(lock)
