@@ -415,6 +415,37 @@ extension Promise {
     public func finally(callback: () -> Void) -> Promise<ValueType> {
         return finally(dispatch_get_main_queue(), callback)
     }
+
+    public func finally<U>(dispatchQueue: dispatch_queue_t, _ callback: () -> Promise<U>) -> Promise<ValueType> {
+        let deferred = Promise<ValueType>.deferred()
+
+        self.then(dispatchQueue,
+            { (value) -> Void in
+                callback()
+                    .then(dispatchQueue,
+                        { (_) in
+                            deferred.fulfill(value)
+                        },
+                        { (_) in
+                            deferred.fulfill(value)
+                        })
+            },
+            { (error) in
+                callback()
+                    .then(dispatchQueue,
+                        { (_) in
+                            deferred.reject(error)
+                        },
+                        { (_) in
+                            deferred.reject(error)
+                        })
+            })
+
+        return deferred.promise
+    }
+    public func finally<U>(callback: () -> Promise<U>) -> Promise<ValueType> {
+        return finally(dispatch_get_main_queue(), callback)
+    }
 }
 
 // =====================================================================

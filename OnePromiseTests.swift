@@ -763,6 +763,48 @@ extension OnePromiseTests {
         deferred.reject(self.generateRandomError())
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
+
+    func testFinallyCallbackReturnsPromise() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+        let expectation3 = self.expectationWithDescription("done 3")
+
+        let mainDeferred    = Promise<Int>.deferred()
+        let finallyDeferred = Promise<Void>.deferred()
+
+        var step = 1
+
+        mainDeferred.promise
+            .finally({ (_) -> Promise<Void> in
+                // (1) .finally returns promise
+                XCTAssertEqual(step++, 1)
+                expectation1.fulfill()
+
+                return finallyDeferred.promise
+            })
+            .then({ (n) in
+                // (3) This resolution should be delayed until
+                // the promise returned from callback is finished.
+                XCTAssertEqual(step++, 3)
+                expectation3.fulfill()
+
+                XCTAssertEqual(n, 777)
+            })
+
+        finallyDeferred.promise
+            .then({
+                // (2) The promise which returned from callback
+                XCTAssertEqual(step++, 2)
+                expectation2.fulfill()
+            })
+
+        mainDeferred.fulfill(777)
+        dispatch_async(dispatch_get_main_queue(), {
+            finallyDeferred.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
 }
 
 // MARK: Promise.all
