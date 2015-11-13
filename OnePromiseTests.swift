@@ -764,7 +764,8 @@ extension OnePromiseTests {
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
     }
 
-    func testFinallyCallbackReturnsPromise() {
+    // The callback passed to .finally returns a promise which will be fulfilled.
+    func testFinallyCallbackReturnsPromiseBeFulfilled() {
         let expectation1 = self.expectationWithDescription("done 1")
         let expectation2 = self.expectationWithDescription("done 2")
         let expectation3 = self.expectationWithDescription("done 3")
@@ -801,6 +802,133 @@ extension OnePromiseTests {
         mainDeferred.fulfill(777)
         dispatch_async(dispatch_get_main_queue(), {
             finallyDeferred.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    // The callback passed to .finally returns a promise which will be rejected.
+    func testFinallyCallbackReturnsPromiseBeRejected() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+        let expectation3 = self.expectationWithDescription("done 3")
+
+        let mainDeferred    = Promise<Int>.deferred()
+        let finallyDeferred = Promise<Void>.deferred()
+
+        var step = 1
+
+        mainDeferred.promise
+            .finally({ (_) -> Promise<Void> in
+                // (1) .finally returns promise
+                XCTAssertEqual(step++, 1)
+                expectation1.fulfill()
+
+                return finallyDeferred.promise
+            })
+            .then({ (n) in
+                // (3) This resolution should be delayed until
+                // the promise returned from callback is finished.
+                XCTAssertEqual(step++, 3)
+                expectation3.fulfill()
+
+                XCTAssertEqual(n, 2015)
+            })
+
+        finallyDeferred.promise
+            .caught({ (_) in
+                // (2) The promise which returned from callback
+                XCTAssertEqual(step++, 2)
+                expectation2.fulfill()
+            })
+
+        mainDeferred.fulfill(2015)
+        dispatch_async(dispatch_get_main_queue(), {
+            finallyDeferred.reject(self.generateRandomError())
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    // The root promise will be rejected.
+    // The callback passed to .finally returns a promise which will be fulfilled.
+    func testRejectPromiseFinallyCallbackReturnsPromiseBeFulfilled() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+        let expectation3 = self.expectationWithDescription("done 3")
+
+        let mainDeferred    = Promise<Int>.deferred()
+        let finallyDeferred = Promise<Void>.deferred()
+
+        var step = 1
+
+        mainDeferred.promise
+            .finally({ (_) -> Promise<Void> in
+                // (1) .finally returns promise
+                XCTAssertEqual(step++, 1)
+                expectation1.fulfill()
+
+                return finallyDeferred.promise
+            })
+            .caught({ (n) in
+                // (3) This resolution should be delayed until
+                // the promise returned from callback is finished.
+                XCTAssertEqual(step++, 3)
+                expectation3.fulfill()
+            })
+
+        finallyDeferred.promise
+            .then({
+                // (2) The promise which returned from callback
+                XCTAssertEqual(step++, 2)
+                expectation2.fulfill()
+            })
+
+        mainDeferred.reject(self.generateRandomError())
+        dispatch_async(dispatch_get_main_queue(), {
+            finallyDeferred.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    // The root promise will be rejected.
+    // The callback passed to .finally returns a promise which will be rejected.
+    func testRejectFinallyCallbackReturnsPromiseBeRejected() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+        let expectation3 = self.expectationWithDescription("done 3")
+
+        let mainDeferred    = Promise<Int>.deferred()
+        let finallyDeferred = Promise<Void>.deferred()
+
+        var step = 1
+
+        mainDeferred.promise
+            .finally({ (_) -> Promise<Void> in
+                // (1) .finally returns promise
+                XCTAssertEqual(step++, 1)
+                expectation1.fulfill()
+
+                return finallyDeferred.promise
+            })
+            .caught({ (n) in
+                // (3) This resolution should be delayed until
+                // the promise returned from callback is finished.
+                XCTAssertEqual(step++, 3)
+                expectation3.fulfill()
+            })
+
+        finallyDeferred.promise
+            .caught({ (_) in
+                // (2) The promise which returned from callback
+                XCTAssertEqual(step++, 2)
+                expectation2.fulfill()
+            })
+
+        mainDeferred.reject(self.generateRandomError())
+        dispatch_async(dispatch_get_main_queue(), {
+            finallyDeferred.reject(self.generateRandomError())
         })
 
         self.waitForExpectationsWithTimeout(1.0, handler: nil)
