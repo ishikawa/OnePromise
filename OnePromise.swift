@@ -461,6 +461,46 @@ extension Promise {
     public func finally<U>(callback: () -> Promise<U>) -> Promise<ValueType> {
         return finally(dispatch_get_main_queue(), callback)
     }
+
+    // -----------------------------------------------------------------
+    // MARK: tap
+    // -----------------------------------------------------------------
+    /**
+     * Like `.finally` that is not called for rejections.
+     */
+    public func tap(dispatchQueue: dispatch_queue_t, _ onFulfilled: () -> Void) -> Promise<ValueType> {
+        return self.tap(dispatchQueue) {
+            Promise<Void>.resolve(onFulfilled())
+        }
+    }
+
+    public func tap<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: () -> Promise<U>) -> Promise<ValueType> {
+        let deferred = Promise<ValueType>.deferred()
+
+        self.then(dispatchQueue,
+            { (value) -> Void in
+                onFulfilled()
+                    .then(dispatchQueue,
+                        { (_) in
+                            deferred.fulfill(value)
+                        },
+                        { (_) in
+                            deferred.fulfill(value)
+                        })
+            })
+
+        return deferred.promise
+    }
+
+    /// Same as `tap(dispatch_get_main_queue(), onFulfilled)`
+    public func tap(onFulfilled: () -> Void) -> Promise<ValueType> {
+        return self.tap(dispatch_get_main_queue(), onFulfilled)
+    }
+
+    /// Same as `tap(dispatch_get_main_queue(), onFulfilled)`
+    public func tap<U>(onFulfilled: () -> Promise<U>) -> Promise<ValueType> {
+        return self.tap(dispatch_get_main_queue(), onFulfilled)
+    }
 }
 
 // =====================================================================
