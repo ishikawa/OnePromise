@@ -392,8 +392,11 @@ extension Promise {
     // -----------------------------------------------------------------
     /**
 
-    `finally` will be invoked regardless of the promise is fulfilled or rejected, allows you to
+    `.finally` will be invoked regardless of the promise is fulfilled or rejected, allows you to
     observe either fulfillment or rejection of the promise.
+
+    If the callback passed to `.finally` returns a promise, the resolution of the returned promise
+    will be delayed until the promise returned from callback is resolved.
 
     - parameter callback
     - returns:  A Promise which will be resolved with the same fulfillment value or
@@ -406,13 +409,56 @@ extension Promise {
                 callback()
                 return value
             },
-            { (error: NSError) in
+            { (_) in
                 callback()
-        })
+            })
     }
 
     /// Same as `finally(dispatch_get_main_queue(), callback)`
     public func finally(callback: () -> Void) -> Promise<ValueType> {
+        return finally(dispatch_get_main_queue(), callback)
+    }
+
+    /**
+
+    If the callback passed to `.finally` returns a promise, the resolution of the returned promise
+    will be delayed until the promise returned from callback is resolved.
+
+    - parameter callback returns a promise
+    - returns:  A Promise which will be resolved with the same fulfillment value or
+    rejection reason as receiver.
+
+    */
+    public func finally<U>(dispatchQueue: dispatch_queue_t, _ callback: () -> Promise<U>) -> Promise<ValueType> {
+        let deferred = Promise<ValueType>.deferred()
+
+        self.then(dispatchQueue,
+            { (value) -> Void in
+                callback()
+                    .then(dispatchQueue,
+                        { (_) in
+                            deferred.fulfill(value)
+                        },
+                        { (_) in
+                            deferred.fulfill(value)
+                        })
+            },
+            { (error) in
+                callback()
+                    .then(dispatchQueue,
+                        { (_) in
+                            deferred.reject(error)
+                        },
+                        { (_) in
+                            deferred.reject(error)
+                        })
+            })
+
+        return deferred.promise
+    }
+
+    /// Same as `finally(dispatch_get_main_queue(), callback)`
+    public func finally<U>(callback: () -> Promise<U>) -> Promise<ValueType> {
         return finally(dispatch_get_main_queue(), callback)
     }
 }
