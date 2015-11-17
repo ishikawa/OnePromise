@@ -461,6 +461,52 @@ extension Promise {
     public func finally<U>(callback: () -> Promise<U>) -> Promise<ValueType> {
         return finally(dispatch_get_main_queue(), callback)
     }
+
+    // -----------------------------------------------------------------
+    // MARK: tap
+    // -----------------------------------------------------------------
+    /**
+    `.tap` takes a callback function that is called when the promise is fulfilled,
+    not called for rejections.
+    If the callback returns a promise, the resolution of the returned promise will be
+    delayed until the promise returned from callback is resolved.
+    */
+    public func tap(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType) -> Void) -> Promise<ValueType> {
+        return self.tap(dispatchQueue) {
+            Promise<Void>.resolve(onFulfilled($0))
+        }
+    }
+
+    public func tap<U>(dispatchQueue: dispatch_queue_t, _ onFulfilled: (ValueType) -> Promise<U>) -> Promise<ValueType> {
+        let deferred = Promise<ValueType>.deferred()
+
+        self.then(dispatchQueue,
+            { (value) -> Void in
+                onFulfilled(value)
+                    .then(dispatchQueue,
+                        { (_) in
+                            deferred.fulfill(value)
+                        },
+                        { (_) in
+                            deferred.fulfill(value)
+                        })
+            },
+            { (error) in
+                deferred.reject(error)
+            })
+
+        return deferred.promise
+    }
+
+    /// Same as `tap(dispatch_get_main_queue(), onFulfilled)`
+    public func tap(onFulfilled: (ValueType) -> Void) -> Promise<ValueType> {
+        return self.tap(dispatch_get_main_queue(), onFulfilled)
+    }
+
+    /// Same as `tap(dispatch_get_main_queue(), onFulfilled)`
+    public func tap<U>(onFulfilled: (ValueType) -> Promise<U>) -> Promise<ValueType> {
+        return self.tap(dispatch_get_main_queue(), onFulfilled)
+    }
 }
 
 // =====================================================================
