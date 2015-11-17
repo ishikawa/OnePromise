@@ -935,6 +935,103 @@ extension OnePromiseTests {
     }
 }
 
+// MARK: tap
+extension OnePromiseTests {
+    func testTap() {
+        let expectation = self.expectationWithDescription("done")
+
+        let deferred = Promise<Int>.deferred()
+
+        deferred.promise
+            .tap({
+                XCTAssertEqual($0, 10000)
+                expectation.fulfill()
+            })
+
+        deferred.fulfill(10000)
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testTapRejected() {
+        let expectation = self.expectationWithDescription("done")
+
+        let deferred = Promise<Int>.deferred()
+
+        deferred.promise
+            .tap({ (_) in
+                XCTFail()
+            })
+            .caught({ (_) in
+                expectation.fulfill()
+            })
+
+        deferred.reject(self.generateRandomError())
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testTapWithCallbackReturnsPromise() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+
+        let mainDeferred = Promise<Int>.deferred()
+        let callbackDeferred = Promise<Void>.deferred()
+
+        var step = 1
+
+        mainDeferred.promise
+            .tap({ (n) -> Promise<Void> in
+                XCTAssertEqual(step++, 1)
+                XCTAssertEqual(n, 20000)
+                expectation1.fulfill()
+
+                return callbackDeferred.promise
+            })
+            .then({ (n) in
+                XCTAssertEqual(step++, 2)
+                XCTAssertEqual(n, 20000)
+                expectation2.fulfill()
+            })
+
+        mainDeferred.fulfill(20000)
+        dispatch_async(dispatch_get_main_queue(), {
+            callbackDeferred.fulfill()
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+
+    func testTapWithCallbackReturnsPromiseWillBeRejected() {
+        let expectation1 = self.expectationWithDescription("done 1")
+        let expectation2 = self.expectationWithDescription("done 2")
+
+        let mainDeferred = Promise<Int>.deferred()
+        let callbackDeferred = Promise<Void>.deferred()
+
+        var step = 1
+
+        mainDeferred.promise
+            .tap({ (n) -> Promise<Void> in
+                XCTAssertEqual(step++, 1)
+                XCTAssertEqual(n, 30000)
+                expectation1.fulfill()
+
+                return callbackDeferred.promise
+            })
+            .then({ (n) in
+                XCTAssertEqual(step++, 2)
+                XCTAssertEqual(n, 30000)
+                expectation2.fulfill()
+            })
+
+        mainDeferred.fulfill(30000)
+        dispatch_async(dispatch_get_main_queue(), {
+            callbackDeferred.reject(self.generateRandomError())
+        })
+
+        self.waitForExpectationsWithTimeout(1.0, handler: nil)
+    }
+}
+
 // MARK: Promise.all
 extension OnePromiseTests {
     private func createPromises() -> (promises: [Promise<Int>], fulfills: [Int -> Void]) {
@@ -1352,4 +1449,3 @@ extension OnePromiseTests {
         return dispatch_get_specific(&testQueueTag) != nil
     }
 }
-
