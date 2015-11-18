@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name    = "OnePromise"
-  spec.version = "0.6.0"
+  spec.version = "0.7.0"
   spec.summary = "Promise for Swift 2.0 which has no dependencies and fits into one file."
 
   spec.source_files = "OnePromise.swift"

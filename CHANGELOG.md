@@ -2,6 +2,13 @@
 
 **IMPORTANT: Version 0.y.z is for initial develpment. Anything may change at any time. The public API should not be considered stable.**
 
+## 0.7.0
+
+- `.tap` method (#26)
+- If the callback passed to `.finally` returns a promise, the resolution of the returned promise will be delayed until the promise returned from callback is resolved. (#25)
+- FIX: `Promise.all` should returns array with fulfillment values at respective positions to the original array. (#24)
+- Error handling with ErrorType. `.reject` and `.caught` now accept `ErrorType` instance. (#23)
+
 ## 0.6.0
 
 - Add `Promise.delay()`

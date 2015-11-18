@@ -1,5 +1,5 @@
 PODS:
-  - OnePromise (0.6.0)
+  - OnePromise (0.7.0)
 
 DEPENDENCIES:
   - OnePromise (from `../`)
@@ -9,6 +9,6 @@ EXTERNAL SOURCES:
     :path: ../
 
 SPEC CHECKSUMS:
-  OnePromise: 64bc194440401baaec51aafec5db3a7d92c5f952
+  OnePromise: a39923c83dfb55a713dabb8a1334e95a838c63ec
 
 COCOAPODS: 0.38.2
